@@ -1,6 +1,6 @@
 # Cordilla account triage
 
-**Turns a scoring model nobody used into a rep's morning — and refuses to publish when the data
+**Turns a scoring model nobody used into a rep's morning, and refuses to publish when the data
 underneath it looks wrong.**
 
 ```bash
@@ -11,7 +11,7 @@ python -m agent.run --as-of 2026-08-01
 
 Read `sample_run/` to see the output without installing anything.
 
-**Optional, both off by default** — `cp .env.example .env`:
+**Optional, both off by default.** Run `cp .env.example .env`:
 `ANTHROPIC_API_KEY` makes the call briefs live and unlocks `--investigate`;
 `LANGSMITH_TRACING` + `LANGSMITH_API_KEY` turn on tracing, which needs no code at all.
 
@@ -27,7 +27,7 @@ nobody's Tuesday. Three measured facts explain why it can't simply be switched o
 
 | What the data says | Why it matters |
 |---|---|
-| Signal lives in the **top 10% only** — below that the ordering is no better than chance | The list has to stop somewhere, and the model can't make that call. Its highest score is 0.27, so at a conventional 0.5 cutoff it never fires at all |
+| Signal lives in the **top 10% only**. Below that the ordering is no better than chance | The list has to stop somewhere, and the model cannot make that call. Its highest score is 0.27, so at a conventional 0.5 cutoff it never fires at all |
 | **73% of accounts** carry information over 90 days old, and every feature counts a 90-day window | For **218 of 300 accounts the period being predicted has already closed** |
 | **39% have no buying-intent data**, and the pipeline fills the gap with an average | "We know nothing" silently becomes "normal interest" — on the model's heaviest feature |
 
@@ -76,10 +76,11 @@ Every threshold traces to something measured:
 | Rule | Value | Where it comes from |
 |---|---|---|
 | Top 10% | score ≥ **0.1088** | Training 90th percentile. Above it, conversion is 26.7% against a 6.5% base |
-| Too old to act on | **90 days** | The features' own window — past it, nothing overlaps the period being predicted |
+| Too old to act on | **90 days** | The features' own window. Past it, nothing overlaps the period being predicted |
 | Expired | **365 days** | A call would reference events more than a year old |
 
-Absolute cuts, not "top 50 of today", so a batch that suddenly overflows the tier is itself an alarm.
+Absolute cuts rather than "top 50 of today", so a batch that suddenly overflows the tier is itself an
+alarm.
 
 ---
 
@@ -107,10 +108,10 @@ flowchart LR
     D --> A --> L --> OUT["Queue · briefs<br/>enrichment list · run record"]
 ```
 
-**Why so little is agentic.** Every fact is present at load time and the routing rule is a
-threshold comparison — nothing to discover, so nothing to decide about what to discover. Asking a
-language model whether 0.15 ≥ 0.1088 would cost determinism, break the control-group comparison,
-and discard the one component with historical evidence in it.
+**Why so little is agentic.** Every fact is present at load time and the routing rule is a threshold
+comparison. There is nothing to discover, so nothing to decide about what to discover. Asking a
+language model whether 0.15 is at least 0.1088 would cost determinism, break the control-group
+comparison, and discard the one component with historical evidence in it.
 
 **Where an agent genuinely earns its place**: roughly 20 accounts a run sit close enough to the
 threshold that the rule is arbitrary, and there the next question depends on the last answer. Those
@@ -127,12 +128,12 @@ flowchart LR
     V -->|"unsafe"| NO["Blocked, reason recorded"]
 ```
 
-The model chooses **which** question to ask. It never supplies the facts — tools read from injected
-state — and it never has the last word: an expired account cannot reach a rep however persuasive
-the reasoning. On the committed run it investigated 20 accounts in 52 turns and changed 16 decisions,
-**most of them more cautious than the rules** — moving accounts from "call with a caveat" to "refresh
-the data first". It is not fully deterministic: re-running shifts a decision or two either way, which is
-exactly why it is confined to the ~20 accounts where the rule was arbitrary anyway.
+The model chooses **which** question to ask. It never supplies the facts, because tools read from
+injected state, and it never has the last word: an expired account cannot reach a rep however
+persuasive the reasoning. On the committed run it investigated 20 accounts in 52 turns and changed 16 decisions,
+**most of them more cautious than the rules**, moving accounts from "call with a caveat" to "refresh
+the data first". It is not fully deterministic: re-running shifts a decision or two either way, which
+is exactly why it is confined to the ~20 accounts where the rule was arbitrary anyway.
 
 It is also **91% of the model spend for 6.7% of the accounts** ($0.126 of $0.138), which is why it is
 off by default and pointed only where the rules are genuinely arbitrary.
@@ -164,22 +165,22 @@ Two cycles carry the weight. `quality_gate → halt` stops a bad batch before it
 ### Every node, and what happens when it fails
 
 Which steps involve a model, and what each does when something goes wrong. Error handling is
-assigned by *type* rather than uniformly — a retry helps a flaky network call and does nothing for
-a bad threshold.
+assigned by *type* rather than uniformly. A retry helps a flaky network call and does nothing for a
+bad threshold.
 
 | Node | What it does | Model? | On failure |
 |---|---|---|---|
-| `load_batch` | Reads the CSV, refuses it if the schema is wrong, adds each account's age and data-gap flags | no | **Retry** once — a file read can fail transiently |
+| `load_batch` | Reads the CSV, refuses it if the schema is wrong, adds each account's age and data-gap flags | no | **Retry** once, since a file read can fail transiently |
 | `quality_gate` | Compares the batch against what the training data looked like | no | **Routes to `halt`** on red. Publishing nothing is the correct outcome, not an error |
 | `score` | `predict_proba` on the exact nine-column contract | no | **Retry** once, then raise |
-| `explain` | Re-scores each account with one feature removed to find its drivers | no | **Raise** — a pure function failing means a real bug |
+| `explain` | Re-scores each account with one feature removed to find its drivers | no | **Raise**, because a pure function failing means a real bug |
 | `triage` | Applies the thresholds, fills rep capacity, assigns the control group | no | **Raise** |
-| `investigate` *(optional)* | Tool-calling agent on ~20 borderline accounts | **yes** — chooses tools | **Skipped and recorded** when no key; capped at 12 turns; policy vetoes unsafe output |
-| `write_briefs` | Asks the model for 2–3 sentences per queued account | **yes** — writes prose only | **Retry** once — an API call is the one thing here that fails randomly |
+| `investigate` *(optional)* | Tool-calling agent on ~20 borderline accounts | **yes**, chooses tools | **Skipped and recorded** when no key; capped at 12 turns; policy vetoes unsafe output |
+| `write_briefs` | Asks the model for 2-3 sentences per queued account | **yes**, writes prose only | **Retry** once, since an API call is the one thing here that fails randomly |
 | `verify_briefs` | Rejects any number the model typed itself | no | **Loops back** to `write_briefs`, twice, then falls back to a deterministic template |
-| `publish` | Writes the outputs and the run record | no | **Pauses for a human** when the batch is amber — `interrupt()`, not a boolean |
+| `publish` | Writes the outputs and the run record | no | **Pauses for a human** when the batch is amber, via `interrupt()` rather than a boolean |
 
-**What travels between nodes.** The run's state holds decisions, counts and health — things worth
+**What travels between nodes.** The run's state holds decisions, counts and health: things worth
 replaying. The batch itself travels beside it, because checkpointed state must be serialisable and a
 dataframe is not. In production that becomes a file path rather than a frame anywhere.
 
@@ -202,10 +203,10 @@ batch three ways and runs the real agent against each:
 Zero exceptions in all three. The middle row is the demonstration: ageing every snapshot by 200
 days leaves the mean score exactly where it was, because the model cannot see dates.
 
-**Three clocks.** Coverage, staleness, batch size and score drift are checked **daily** — needing
-no labels, they are the only signals that catch anything this week. Rep dispositions are a
+**Three clocks.** Coverage, staleness, batch size and score drift are checked **daily**. Needing no
+labels, they are the only signals that catch anything this week. Rep dispositions are a
 **four-week** signal. Conversion against the held-back control group is the **quarterly** verdict.
-One bad week means nothing at 30 accounts a week; the arithmetic is in `PROPOSAL.md`.
+One bad week means nothing at 30 accounts a week. The arithmetic is in `PROPOSAL.md`.
 
 `monitoring/RUNBOOK.md` gives every alert an owner and a first move.
 
@@ -240,14 +241,14 @@ llm    ChatAnthropic      2566ms | 687 tokens
 llm    ChatAnthropic      2134ms | 700 tokens     ... x16
 ```
 
-It earns its place on the LLM layer: debugging a tool-choosing loop from a JSON file is miserable,
-and `--investigate` makes 50+ model calls a run. What it does **not** do is answer the question the
-business actually has. *"Did the accounts we queued in August beat the ones we held back?"* is a
-join between `decisions.csv` and the CRM ninety days later — no tracing tool stores that. And a
-trace cannot stop a bad batch: `monitoring/checks.py` runs **before** anything publishes, which is
-where the value is. Our worst failure produces a perfectly clean trace.
+It earns its place on the LLM layer: debugging a tool-choosing loop from a JSON file is painful, and
+`--investigate` makes 50+ model calls a run. What it does **not** do is answer the question the
+business actually has. *"Did the accounts we queued in August beat the ones we held back?"* is a join
+between `decisions.csv` and the CRM ninety days later, and no tracing tool stores that. Nor can a trace
+stop a bad batch: `monitoring/checks.py` runs **before** anything publishes, which is where the value
+is. Our worst failure produces a perfectly clean trace.
 
-Langfuse is the same two ideas with one extra dependency, and self-hostable — the right call if CRM
+Langfuse is the same two ideas with one extra dependency, and self-hostable: the right call if CRM
 records cannot leave the building.
 
 ---
@@ -258,9 +259,9 @@ Runs live when `ANTHROPIC_API_KEY` is set and falls back to a documented stand-i
 the repo works either way and the run record says which path ran.
 
 Its authority is deliberately narrow: it writes sentences, and on boundary accounts it chooses what
-to check. Every number in a brief is substituted by code from a fixed fact set, and a verifier
-rejects any digit the model typed itself. A brief that misquotes a figure to a customer is how
-trust dies, and it leaves no error behind.
+to check. Every number in a brief is substituted by code from a fixed fact set, and a verifier rejects
+any digit the model typed itself. A brief that misquotes a figure to a customer costs trust that is
+hard to win back, and nothing in the logs would show it happened.
 
 ---
 
@@ -314,6 +315,6 @@ monitoring/   checks.py, demo_silent_failure.py, RUNBOOK.md
 
 ## What this is not
 
-Not a retrained model — the pickle is used exactly as provided. Not a lookup tool; nobody types in
-an account number. Not an autonomous emailer: it queues work for humans and stops before anything
-leaves the building. Not production code — no test suite, no packaging, no CI, as the exercise asks.
+Not a retrained model: the pickle is used exactly as provided. Not a lookup tool; nobody types in an
+account number. Not an autonomous emailer, since it queues work for humans and stops before anything
+leaves the building. Not production code, with no test suite, packaging or CI, as the exercise asks.
