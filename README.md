@@ -36,11 +36,26 @@ nobody's Tuesday. Three measured facts explain why it can't simply be switched o
 
 | What the data says | Why it matters |
 |---|---|
-| Signal lives in the **top 10% only**. Below that the ordering is no better than chance | The list has to stop somewhere, and the model cannot make that call. Its highest score is 0.27, so at a conventional 0.5 cutoff it never fires at all |
+| It is only trustworthy about its **top 10%**. Below that, its ordering is no better than shuffling | The list has to stop somewhere, and the model cannot say where. It never scores anything above 0.27, so the usual "act when it passes 0.5" rule would fire on nothing, ever |
 | **73% of accounts** carry information over 90 days old, and every feature counts a 90-day window | For **218 of 300 accounts the period being predicted has already closed** |
-| **39% have no buying-intent data**, and the pipeline fills the gap with an average | "We know nothing" silently becomes "normal interest" — on the model's heaviest feature |
+| **39% have no buying-intent data**, and the step that prepares data for the model fills the gap with an average | "We know nothing about this company" silently becomes "normal interest", on the fact the model leans on most |
 
-None of that is the model's fault: `snapshot_date` was never one of its inputs.
+None of that is the model's fault. It was given nine facts about each company and the date was not one
+of them, so it genuinely cannot tell fresh information from a year-old file.
+
+## What we did about it
+
+Five problems, five specific things built. This is the whole submission in one table.
+
+| The problem | What we built |
+|---|---|
+| The model cannot say where the list should stop | A cut-off at the point its own evidence runs out, fixed in advance rather than "take the top 50 of whatever arrived today" |
+| It cannot see how old the information is | Every account's age is worked out before scoring, and anything describing a period that has already closed is routed away from a phone call |
+| It cannot tell "no data" from "average data" | We test whether the missing number would change the decision. If it would, we buy the data instead of guessing |
+| It cannot tell a rep why | A plain-English reason per account, worked out from the model itself, plus two or three sentences they can actually open a call with |
+| Nobody would notice it going wrong | Six checks comparing every batch against what normal looks like, with the authority to stop the run rather than publish a list nobody should trust |
+
+The last row is the one that matters most, and the rest of this README is mostly about it.
 
 ---
 
@@ -102,17 +117,17 @@ Three layers, and the split is the whole design.
 
 ```mermaid
 flowchart LR
-    subgraph D["DETERMINISTIC · ~280 accounts"]
+        subgraph D["RULES · ~280 accounts"]
         direction TB
-        D1["Contract check"] --> D2["Model score"] --> D3["Reason codes"] --> D4["Threshold routing"]
+        D1["Check the data<br/>is usable"] --> D2["Ask the model<br/>for a score"] --> D3["Work out why<br/>it scored that"] --> D4["Apply the<br/>thresholds"]
     end
-    subgraph A["AGENTIC · ~20 accounts"]
+        subgraph A["AGENT · ~20 borderline accounts"]
         direction TB
-        A1["Tool-using agent<br/>picks what to check"] --> A2["Recommends an action"] --> A3["Policy veto"]
+        A1["Model picks<br/>what to check next"] --> A2["Recommends<br/>an action"] --> A3["Rules can<br/>overrule it"]
     end
-    subgraph L["LANGUAGE · queued accounts"]
+        subgraph L["WRITING · queued accounts only"]
         direction TB
-        L1["Model writes prose<br/>with placeholders"] --> L2["Code fills the numbers"] --> L3["Verifier rejects<br/>invented digits"]
+        L1["Model writes the words,<br/>leaving gaps for numbers"] --> L2["Code fills<br/>every number"] --> L3["Any invented number<br/>is rejected"]
     end
     D --> A --> L --> OUT["Queue · briefs<br/>enrichment list · run record"]
 ```
