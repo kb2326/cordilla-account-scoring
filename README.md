@@ -1,263 +1,258 @@
 # Cordilla account triage
 
-**A nightly agent that decides which accounts a rep should call tomorrow, which ones need fresh
-data before anyone calls them, and which ones to leave alone — and records what it decided, how
-long it took and what it cost.**
+**Turns a scoring model nobody used into a rep's morning — and refuses to publish when the data
+underneath it looks wrong.**
 
-The scoring model already existed and sat unused. This repo is everything between "here is a
-number" and "Priya knows who to call at 8:30 AM."
+```bash
+pip install -r requirements.txt
+python analysis/profile.py
+python -m agent.run --as-of 2026-08-01
+```
+
+Read `sample_run/` to see the output without installing anything.
 
 ---
 
-## The problem in 30 seconds
+## The problem
 
-Cordilla has tens of thousands of non-customer accounts and a handful of reps. A rep can make
-~40 calls a day, and cold conversion is **under 1%**. The only real lever is choosing better.
+Cordilla has tens of thousands of non-customer accounts and five reps. A rep makes ~40 calls a day
+and cold conversion is under 1%, so the only lever is **choosing better**.
 
-A model already exists that scores an account's chance of converting within 90 days. It works
-reasonably well — but on its own it can't run a sales team, for three reasons we measured in
-`analysis/`:
+A model already scored those accounts and then sat unused, because a number in a file changes
+nobody's Tuesday. Three measured facts explain why it can't simply be switched on:
 
-| What we found | Why it matters |
+| What the data says | Why it matters |
 |---|---|
-| **Its signal lives in the top 10% only.** Below that, the ordering is no better than chance | A ranked list of 300 is mostly noise. The list has to stop somewhere, and that cut is a decision the model can't make |
-| **73% of the batch is working from information over 90 days old.** Its highest-scoring account was last updated in October 2025 | Every activity column counts a 90-day window. Past 90 days, the window it describes has already closed |
-| **39% of accounts have no buying-intent data**, and the model's preprocessing fills the gap with an average | "We know nothing" silently becomes "normal interest" — on the model's single heaviest feature |
+| Signal lives in the **top 10% only** — below that the ordering is no better than chance | The list has to stop somewhere, and the model can't make that call. Its highest score is 0.27, so at a conventional 0.5 cutoff it never fires at all |
+| **73% of accounts** carry information over 90 days old, and every feature counts a 90-day window | For **218 of 300 accounts the period being predicted has already closed** |
+| **39% have no buying-intent data**, and the pipeline fills the gap with an average | "We know nothing" silently becomes "normal interest" — on the model's heaviest feature |
 
-None of those are the model's fault. The date on the data was never one of its inputs.
+None of that is the model's fault: `snapshot_date` was never one of its inputs.
 
 ---
 
-## How it works
+## What the agent does
 
 ```mermaid
 flowchart TD
-    IN["Today's accounts"] --> CHK{"Is this batch<br/>trustworthy?"}
-    CHK -->|"no"| HALT["Stop.<br/>Publish nothing.<br/>Alert a human."]
-    CHK -->|"yes"| SCORE["Score every account<br/>using the existing model"]
-    SCORE --> WHY["Explain each score<br/>using that account's own facts"]
+    IN["Today's accounts"] --> CHK{"Does this batch look like<br/>the data the model was built on?"}
+    CHK -->|"no"| STOP["Stop.<br/>Publish nothing.<br/>Tell a human."]
+    CHK -->|"yes"| SCORE["Score with the existing model"]
+    SCORE --> WHY["Work out why each<br/>account scored that way"]
     WHY --> ROUTE{"What should happen<br/>to this account?"}
     ROUTE --> CALL["Rep calls today"]
     ROUTE --> FRESH["Buy fresh data first"]
     ROUTE --> NURT["Marketing nurture"]
     ROUTE --> HOLD["Leave alone,<br/>reason recorded"]
-    CALL --> BRIEF["Write a 3-line brief.<br/>Words from a language model,<br/>every number filled by code"]
-    BRIEF --> PUB["Publish into the rep's<br/>normal task list"]
+    CALL --> BRIEF["Write the call brief:<br/>model writes the words,<br/>code fills every number"]
+    BRIEF --> PUB["Publish to the rep's<br/>normal task list"]
     PUB --> REC["Record every decision,<br/>timing and cost"]
-    HALT --> REC
+    STOP --> REC
 ```
 
-The rep never opens a dashboard or learns a new tool. The work appears where their work already is.
+The rep never opens a dashboard. The work appears where their work already is.
 
----
-
-## What happens to a single account
+### How one account is decided
 
 ```mermaid
 flowchart TD
-    A["One account"] --> B{"Score in the top 10%<br/>of what this model<br/>has ever produced?"}
-    B -->|"no — but top 30%"| N["NURTURE<br/>marketing campaign"]
-    B -->|"no"| H["HOLD<br/>reason recorded, not dropped"]
-    B -->|"yes"| C{"How old is<br/>the information?"}
-    C -->|"over a year"| F["REFRESH FIRST<br/>send to the data vendor"]
-    C -->|"3 to 12 months"| E["CALL WITH CAVEAT<br/>brief states the data's age"]
-    C -->|"under 90 days"| D{"Was buying intent<br/>actually measured?"}
-    D -->|"no, it was filled in"| F
-    D -->|"yes"| G["CALL TODAY"]
+    A["One account"] --> B{"Score in the top 10%?"}
+    B -->|"no, but top 30%"| N["NURTURE"]
+    B -->|"no"| H["HOLD — reason recorded"]
+    B -->|"yes"| C{"How old is the data?"}
+    C -->|"over a year"| F["RE-ENRICH<br/>refresh before calling"]
+    C -->|"3–12 months"| E["CALL WITH CAVEAT<br/>brief states the age"]
+    C -->|"under 90 days"| D{"Was intent measured,<br/>or filled in?"}
+    D -->|"filled in, and it<br/>decides the outcome"| F
+    D -->|"measured"| G["CALL NOW"]
 ```
 
-Every threshold here is anchored to something measured, not chosen by taste:
+Every threshold traces to something measured:
 
 | Rule | Value | Where it comes from |
 |---|---|---|
-| "Top 10%" | score ≥ **0.1088** | The 90th percentile of the model's scores on its own training data. Above it, conversion runs at 26.7% against a 6.5% base. Below it, ordering is noise |
-| "Information too old" | **90 days** | Every feature counts a 90-day window. Past that, the window no longer overlaps the period we're predicting |
-| "Expired" | **365 days** | Beyond a year, a call references events that are over a year stale |
+| Top 10% | score ≥ **0.1088** | Training 90th percentile. Above it, conversion is 26.7% against a 6.5% base |
+| Too old to act on | **90 days** | The features' own window — past it, nothing overlaps the period being predicted |
+| Expired | **365 days** | A call would reference events more than a year old |
 
-An absolute cut, not "top 50 of today's batch" — so batches stay comparable, and a sudden overflow
-is itself a warning sign.
-
----
-
-## What the model sees, and what the agent adds
-
-```mermaid
-flowchart LR
-    M["THE MODEL<br/>reads 9 facts about a company<br/>and returns one number"] --> A["THE AGENT"]
-    K["THE AGENT ALSO KNOWS<br/>how old the information is<br/>whether intent was measured or guessed<br/>how many calls a rep can make today<br/>who was already called last week"] --> A
-    A --> O["Today's queue,<br/>with a reason on every line"]
-```
+Absolute cuts, not "top 50 of today", so a batch that suddenly overflows the tier is itself an alarm.
 
 ---
 
-## How we'd know it stopped working
+## Architecture
 
-These systems rarely break loudly. The list keeps arriving, looks normal, and is slowly wrong.
-Three checks, on three different clocks:
+Three layers, and the split is the whole design.
 
 ```mermaid
 flowchart LR
-    R["Every morning's run"] --> D1["NEXT MORNING<br/>Is data still arriving?<br/>Is it going stale?"]
-    R --> D2["WITHIN A MONTH<br/>Are reps starting to<br/>disagree with the list?"]
-    R --> D3["NEXT QUARTER<br/>Did queued accounts convert<br/>more than the held-back group?"]
+    subgraph D["DETERMINISTIC · ~280 accounts"]
+        direction TB
+        D1["Contract check"] --> D2["Model score"] --> D3["Reason codes"] --> D4["Threshold routing"]
+    end
+    subgraph A["AGENTIC · ~20 accounts"]
+        direction TB
+        A1["Tool-using agent<br/>picks what to check"] --> A2["Recommends an action"] --> A3["Policy veto"]
+    end
+    subgraph L["LANGUAGE · queued accounts"]
+        direction TB
+        L1["Model writes prose<br/>with placeholders"] --> L2["Code fills the numbers"] --> L3["Verifier rejects<br/>invented digits"]
+    end
+    D --> A --> L --> OUT["Queue · briefs<br/>enrichment list · run record"]
 ```
 
-One bad week means nothing: with ~30 accounts in a weekly queue, the numbers bounce far too much to
-read. Alerts fire on a four-week pattern instead. The arithmetic behind that is in `PROPOSAL.md`.
+**Why so little is agentic.** Every fact is present at load time and the routing rule is a
+threshold comparison — nothing to discover, so nothing to decide about what to discover. Asking a
+language model whether 0.15 ≥ 0.1088 would cost determinism, break the control-group comparison,
+and discard the one component with historical evidence in it.
 
-A small share of good-looking accounts is **deliberately held back** from the queue every run. It
-costs a few calls. It's the only way anyone can ever prove this worked rather than claim it.
-
-### The flow as the code actually runs it
-
-Generated by `python -m agent.run --as-of 2026-08-01 --print-graph`, so it cannot
-drift from the implementation:
+**Where an agent genuinely earns its place**: roughly 20 accounts a run sit close enough to the
+threshold that the rule is arbitrary, and there the next question depends on the last answer. Those
+get a real tool-calling loop (`agent/investigator.py`, off by default, `--investigate`):
 
 ```mermaid
-graph TD;
-    __start__([start]) --> load_batch
+flowchart LR
+    S["Boundary account"] --> M["Model decides<br/>what to check next"]
+    M -->|"tool call"| T["check_data_freshness<br/>probe_intent_sensitivity<br/>compare_to_similar_accounts<br/>check_recent_crm_activity"]
+    T -->|"observation"| M
+    M -->|"enough"| R["recommend_action"]
+    R --> V{"Policy veto"}
+    V -->|"allowed"| OK["Applied"]
+    V -->|"unsafe"| NO["Blocked, reason recorded"]
+```
+
+The model chooses **which** question to ask. It never supplies the facts — tools read from injected
+state — and it never has the last word: an expired account cannot reach a rep however persuasive
+the reasoning. On the committed run it investigated 20 accounts in 53 turns and changed 15
+decisions, **13 of them more cautious than the rules**.
+
+### The graph, generated from the code
+
+`python -m agent.run --as-of 2026-08-01 --print-graph`
+
+```mermaid
+flowchart TD
+    start(["start"]) --> load_batch
     load_batch --> quality_gate
-    quality_gate -. "red: publish nothing" .-> halt
+    quality_gate -. "red" .-> halt
     quality_gate -. "green / amber" .-> score
-    score --> explain
-    explain --> triage
-    triage --> write_briefs
+    score --> explain --> triage
+    triage -. "--investigate" .-> investigate --> write_briefs
+    triage -. "default" .-> write_briefs
     write_briefs --> verify_briefs
-    verify_briefs -. "a number the model invented" .-> write_briefs
+    verify_briefs -. "invented a number" .-> write_briefs
     verify_briefs -. "clean" .-> publish
-    halt --> __end__([end])
-    publish --> __end__
+    halt --> finish(["end"])
+    publish --> finish
 ```
 
-`verify_briefs → write_briefs` is the cycle: any brief containing a number the model
-typed itself goes back for another attempt, twice, then falls back to a template.
+Two cycles carry the weight. `quality_gate → halt` stops a bad batch before it reaches anyone;
+`verify_briefs → write_briefs` sends a brief back when the model writes a number it wasn't given.
 `publish` pauses for a human when the batch is amber.
 
 ---
 
-## Setup
+## Monitoring
+
+These systems fail without crashing. `python -m monitoring.demo_silent_failure` breaks the real
+batch three ways and runs the real agent against each:
+
+| Broken how | What the model reports | What the checks do |
+|---|---|---|
+| Intent vendor coverage collapses | 300 accounts, mean 0.0607, all valid | **RED — halted** |
+| Refresh pipeline stalls (+200 days) | 300 accounts, **mean 0.0655 — identical** | **RED — halted** |
+| Upstream filter halves the batch | 105 accounts, all valid | **AMBER — paused** |
+
+Zero exceptions in all three. The middle row is the demonstration: ageing every snapshot by 200
+days leaves the mean score exactly where it was, because the model cannot see dates.
+
+**Three clocks.** Coverage, staleness, batch size and score drift are checked **daily** — needing
+no labels, they are the only signals that catch anything this week. Rep dispositions are a
+**four-week** signal. Conversion against the held-back control group is the **quarterly** verdict.
+One bad week means nothing at 30 accounts a week; the arithmetic is in `PROPOSAL.md`.
+
+`monitoring/RUNBOOK.md` gives every alert an owner and a first move.
+
+---
+
+## Observability
+
+| File | For | Contents |
+|---|---|---|
+| `runs.jsonl` | analyst | One line per run: config used, counts by action, per-node timings, **measured cost**, alerts |
+| `decisions.csv` | analyst | One row per account — score, data age, action, reason, control-group flag. **Joins to CRM outcomes in 90 days** |
+| `run_summary.txt` | sales manager | Five lines, no jargon |
+
+Cost is measured rather than estimated: the committed run is `claude-haiku-4-5-20251001`, 16 calls,
+**$0.0187**, tokens taken from the API response. Every figure is tagged **measured** or **assumed**.
+
+Accept-rate and lift print as **pending**, never estimated — that data does not exist for 14 weeks,
+and filling the gap with a guess is what cost the previous effort its credibility.
+
+**LangSmith** needs no code: set `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` and every node
+becomes a span. Verified, not assumed. It doesn't replace `decisions.csv` — the 90-day question is
+a join, not a trace — nor the gate, since our worst failure produces a perfectly clean trace.
+
+---
+
+## The language model
+
+Runs live when `ANTHROPIC_API_KEY` is set and falls back to a documented stand-in when it isn't, so
+the repo works either way and the run record says which path ran.
+
+Its authority is deliberately narrow: it writes sentences, and on boundary accounts it chooses what
+to check. Every number in a brief is substituted by code from a fixed fact set, and a verifier
+rejects any digit the model typed itself. A brief that misquotes a figure to a customer is how
+trust dies, and it leaves no error behind.
+
+---
+
+## Run everything
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-Python 3.11 or 3.12 (numpy 1.26.4 has no wheels for 3.13). Dependencies are pinned to the versions the model was saved with
-(`scikit-learn==1.5.2`); loading a pickle under a different version is a silent-corruption risk,
-so this is deliberate.
-
-## Run it
-
-```bash
-# 1. Regenerate every number quoted in PROPOSAL.md and this README
-python analysis/profile.py
-
-# 2. The agent: score the batch, decide, write the queue and the briefs
-#    Calls Claude if ANTHROPIC_API_KEY is set; uses the documented stand-in if not.
-python -m agent.run --accounts data/accounts_to_score.csv --as-of 2026-08-01
-
-# 3. The monitoring checks, standalone
-python -m monitoring.checks --accounts data/accounts_to_score.csv --as-of 2026-08-01
-
-# 4. Prove the monitoring catches a silent failure
-python -m monitoring.demo_silent_failure
+python analysis/profile.py                             # regenerate every number quoted anywhere
+python analysis/policy_backtest.py                     # do our gates actually beat raw ranking?
+python -m agent.run --as-of 2026-08-01                 # the agent
+python -m agent.run --as-of 2026-08-01 --investigate   # + the tool-using agent (needs a key)
+python -m monitoring.checks --as-of 2026-08-01         # checks alone; exit 0/1/2 = green/amber/red
+python -m monitoring.demo_silent_failure               # proof the checks catch silent failures
 ```
 
 `--as-of` is required and never defaults to the system clock: both CSVs are snapshots taken on
-2026-08-01, and every age in this repo is measured from that date.
+2026-08-01, and every age here is measured from that date. Python 3.11 or 3.12 (numpy 1.26.4 has no
+3.13 wheels).
 
 ---
 
-## What it produces
+## Where each deliverable lives
 
-| File | For whom | What it is |
-|---|---|---|
-| `outputs/call_queue.csv` | SDR | The accounts to call, best first, with reasons |
-| `outputs/briefs.md` | SDR | Two or three lines per queued account, numbers filled by code |
-| `outputs/enrichment_requests.csv` | RevOps | Accounts worth refreshing before anyone calls |
-| `outputs/run_summary.txt` | Sales manager | Plain English, no jargon |
-| `outputs/runs.jsonl` | AI transformation analyst | One line per run: counts, timings, cost, alerts |
-| `outputs/decisions.csv` | AI transformation analyst | One row per account per run — joins to CRM outcomes later |
-
-The last two are the observability layer. **This repo produces the records; it does not build the
-dashboard** — that's the analyst's job, and they need clean data more than they need our charts.
-
-Every cost and volume figure is tagged **measured** or **assumed**.
-
-**The language model runs for real when `ANTHROPIC_API_KEY` is set**, and falls back to a
-documented stand-in when it is not — so the repo works for a reviewer without a key, and the run
-record says which path ran (`cost.mocked`, `cost.model`). The committed `sample_run/` is a live
-run: `claude-haiku-4-5-20251001`, 16 calls, 9,357 input and 1,857 output tokens, **$0.0186
-measured**, 0 briefs rejected by the verifier.
-
-### On LangSmith and Langfuse
-
-**LangSmith works here with no code at all** — set `LANGSMITH_TRACING=true` and
-`LANGSMITH_API_KEY` and every node becomes a span with real token counts and latency, because
-LangGraph emits to it natively. Verified, not assumed: a traced run produces `write_briefs`,
-`verify_briefs` and `publish` spans alongside sixteen `ChatAnthropic` calls at ~2s and ~690
-tokens each.
-
-The local records exist alongside it rather than instead of it, for two reasons. One, a repo
-whose observability only works with someone else's API key does not work for the person
-reviewing it. Two, and more importantly, they answer a different question.
-
-A tracing backend answers *"what did the run do, and what did the model cost?"* The
-question this system has to answer in 90 days is *"which accounts did we queue on 12
-August, what did we believe about them, and did they convert more often than the ones we
-held back?"* That is a table you join to Salesforce, not a trace you scroll. Hence
-`decisions.csv` and `runs.jsonl`, which an analyst can query with SQL and nobody needs a
-login for.
-
-They are complementary, not alternatives, and both plug in cleanly:
-
-| | How | Cost to add |
-|---|---|---|
-| **LangSmith** | `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY=...` | **No code at all** — verified against a live run. `langsmith` already arrives with `langchain-core` |
-| **Langfuse** | `pip install langfuse`, then pass `CallbackHandler()` in the run config | Three lines, one dependency. The self-hostable option if account data cannot leave the building, which for Salesforce records is a real constraint |
-
-What neither replaces is the batch gate. A trace tells you what happened *after* it
-happened; `monitoring/checks.py` runs before the queue is published and can refuse. In
-this system the refusal is the valuable part — the failure we care about produces a
-perfectly clean trace.
-
----
-
-## Where the numbers come from
-
-Every figure in `PROPOSAL.md` and in this README is regenerated by `analysis/profile.py` into
-`analysis/findings.json`. If a number isn't in that file, it isn't in the write-up.
-
----
-
-## Repo map
+| The exercise asks for | Here |
+|---|---|
+| **Impact framing**, grounded in the data | `PROPOSAL.md` §1, numbers from `analysis/findings.json` |
+| **A working agent** that changes a rep's day | `agent/` · `sample_run/` · ~11s live |
+| Tools and actions, **and why those** | `PROPOSAL.md` §2 · `agent/policy.py` · `agent/investigator.py` |
+| Structure, control flow, framework choice | The diagrams above · `agent/graph.py` |
+| **Monitoring**: what to watch, noise vs signal, response | `PROPOSAL.md` §3 · `monitoring/` |
+| One concrete, runnable piece of it | `monitoring/checks.py` + `demo_silent_failure.py` |
+| Written proposal, 800–1,200 words | `PROPOSAL.md` |
+| Research log, kept as the work happened | `RESEARCH-LOG.md` |
 
 ```
-analysis/     profile.py        measures the data and the model; writes findings.json
-              findings.json     every number this repo quotes, regenerated by that script
-agent/        run.py            entry point (--as-of is required, never the system clock)
-              graph.py          the flow above, as a LangGraph state machine
-              contracts.py      what a valid batch is; per-account quality flags
-              scoring.py        loads the pickle safely, scores against a fixed contract
-              policy.py         the thresholds, and why each one is what it is
-              explain.py        why an account scored what it did
-              brief.py          slot filling and the number verifier
-              llm.py            the mocked language model, with the real plug-in point
-              emit.py           the four audience-specific outputs
-monitoring/   checks.py         the checks; baselines come from analysis/findings.json
-              demo_silent_failure.py
-              RUNBOOK.md        what each alert means, who owns it, first move
-model/        model.pkl         provided, not retrained
-data/         *.csv             provided, not modified
-PROPOSAL.md                     impact, agent design, monitoring design
-RESEARCH-LOG.md                 what was tried, what failed, what the AI got wrong
+analysis/     profile.py            measures the data and the model; writes findings.json
+              policy_backtest.py    tests our own routing gates against outcomes
+agent/        run.py                entry point
+              graph.py              the flow above, as a LangGraph state machine
+              contracts.py          what a valid batch is; per-account quality flags
+              scoring.py            loads the pickle safely, scores a fixed contract
+              policy.py             the thresholds, each beside its evidence
+              explain.py            why an account scored what it did
+              investigator.py       the tool-using agent for boundary accounts
+              brief.py, llm.py      slot filling, the verifier, the model seam
+              emit.py               the audience-specific outputs
+monitoring/   checks.py, demo_silent_failure.py, RUNBOOK.md
 ```
 
 ## What this is not
 
-- Not a retrained or tuned model. The pickle is used exactly as provided.
-- Not a lookup tool. Nobody types in an account number; the system pushes work out.
-- Not an autonomous emailer. It queues work for humans and stops before anything leaves the building.
-- Not a production service. No test suite, no packaging, no CI — the exercise asks for a working
-  prototype, and that's what this is.
+Not a retrained model — the pickle is used exactly as provided. Not a lookup tool; nobody types in
+an account number. Not an autonomous emailer: it queues work for humans and stops before anything
+leaves the building. Not production code — no test suite, no packaging, no CI, as the exercise asks.

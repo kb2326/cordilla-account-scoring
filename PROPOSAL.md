@@ -35,10 +35,19 @@ Two caveats before anyone gets excited:
 holdout produce the real number.
 
 In rep terms: **~15 calls per win** at the base rate, **~3.4** in the top decile
-(in-sample). *Assumption:* 5 SDRs × 40 dials × 20 days ≈ 1,000 accounts worked monthly;
-at 1% that is ~10 wins, at 2x ~20, worth roughly **$150k new ARR monthly** at an assumed
-$15k ACV. The assumption carrying that last sentence is the ACV, not the model — the
-claim I defend is calls-per-win.
+(in-sample). *Assumptions, benchmarked rather than invented:* 5 SDRs × 40 dials × 20 days ≈ 1,000
+accounts worked monthly — 40–50 dials is the published 2026 band for outbound SDRs, and 1,000
+accounts is the conservative end of 50–150 prospects per rep per week. At 1% that is ~10 wins, at
+2x ~20, worth roughly **$150k new ARR monthly** at a **$15k ACV** — the SMB/mid-market boundary
+against a 2026 cross-industry median of $24k, so again the cautious end. The assumption carrying
+that last sentence is the ACV, not the model; the claim I defend is calls-per-win.
+
+**Do the gates actually help?** `analysis/policy_backtest.py` tests them against the 1,099
+labelled accounts whose outcome window closed. Honest answer: not provably, at this sample size.
+Freshness points the right way — inside the top tier, accounts over a year old convert at 21.4%
+against 31.5% — but every confidence interval overlaps, and gated and ungated queues of 25 and 50
+are within noise. The gates stay on structural grounds, not because this test blessed them, and
+that gap is precisely what the control group exists to close.
 
 **Being wrong, each way.** A false positive costs ~8 minutes. A false negative defers
 an opportunity — the account returns next run, unless a competitor got there first.
