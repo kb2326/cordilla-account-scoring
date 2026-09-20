@@ -126,8 +126,12 @@ flowchart LR
 
 The model chooses **which** question to ask. It never supplies the facts — tools read from injected
 state — and it never has the last word: an expired account cannot reach a rep however persuasive
-the reasoning. On the committed run it investigated 20 accounts in 53 turns and changed 15
-decisions, **13 of them more cautious than the rules**.
+the reasoning. On the committed run it investigated 20 accounts in 54 turns and changed 17
+decisions, **most of them more cautious than the rules** — moving accounts from "call with a
+caveat" to "refresh the data first".
+
+It is also **92% of the model spend for 6.7% of the accounts** ($0.129 of $0.140), which is why it
+is off by default and pointed only where the rules are genuinely arbitrary.
 
 ### The graph, generated from the code
 
@@ -186,8 +190,11 @@ One bad week means nothing at 30 accounts a week; the arithmetic is in `PROPOSAL
 | `decisions.csv` | analyst | One row per account — score, data age, action, reason, control-group flag. **Joins to CRM outcomes in 90 days** |
 | `run_summary.txt` | sales manager | Five lines, no jargon |
 
-Cost is measured rather than estimated: the committed run is `claude-haiku-4-5-20251001`, 16 calls,
-**$0.0187**, tokens taken from the API response. Every figure is tagged **measured** or **assumed**.
+Cost is measured rather than estimated, and includes every model call. The committed run
+(`--investigate`, live) is `claude-haiku-4-5-20251001`, **63 calls, $0.1402** — 9 briefs at $0.011
+and 54 investigation turns at $0.129 — with tokens taken from the API responses. The default run,
+without the boundary agent, is 16 briefs for about **$0.019**. Every figure is tagged **measured**
+or **assumed**.
 
 Accept-rate and lift print as **pending**, never estimated — that data does not exist for 14 weeks,
 and filling the gap with a guess is what cost the previous effort its credibility.
@@ -253,7 +260,7 @@ LANGSMITH_TRACING=true LANGSMITH_API_KEY=... python -m agent.run --as-of 2026-08
 | The exercise asks for | Here |
 |---|---|
 | **Impact framing**, grounded in the data | `PROPOSAL.md` §1, numbers from `analysis/findings.json` |
-| **A working agent** that changes a rep's day | `agent/` · `sample_run/` · ~11s live |
+| **A working agent** that changes a rep's day | `agent/` · `sample_run/` · 0.1s mocked, 13s live, 47s with `--investigate` |
 | Tools and actions, **and why those** | `PROPOSAL.md` §2 · `agent/policy.py` · `agent/investigator.py` |
 | Structure, control flow, framework choice | The diagrams above · `agent/graph.py` |
 | **Monitoring**: what to watch, noise vs signal, response | `PROPOSAL.md` §3 · `monitoring/` |

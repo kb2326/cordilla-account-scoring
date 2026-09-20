@@ -353,7 +353,9 @@ once, which suggests they may not be actively evaluating yet."* It reasoned abou
 sentence that makes a rep trust the queue.
 
 **Measured, not assumed:** `claude-haiku-4-5-20251001`, 16 calls, 9,357 in / 1,857 out,
-**$0.0186 per run**, about $0.0012 per brief. At 200 briefs a day that is roughly $7 a
+**$0.0186 per run**, about $0.0012 per brief. *(Those are the briefs alone, before the
+boundary agent existed. The committed run includes it and costs $0.1402 — see the final
+entry.)* At 200 briefs a day that is roughly $7 a
 month, which is not a number anyone needs to think about again.
 
 **And a performance finding that only appears once the calls are real.** The run went from
@@ -395,7 +397,9 @@ has already closed — so the value is triage, and the risk is trust.
 | Intent coverage | 38.7% missing, median-imputed at 25.3; converts 8.2% present vs 3.9% missing |
 | Censored labels | 101 training rows younger than 90 days, all labelled "did not convert" |
 | Drift today | every feature PSI below 0.06, score PSI 0.0061 — the baseline the alerts use |
-| This run | 300 scored, 16 queued, 7 to enrichment, 10 held back, 11.0s, $0.0186 live |
+| Committed run (`--investigate`) | 300 scored, 9 queued, 20 to enrichment, 7 held back, 46.7s, **$0.1402** |
+| Split of that cost | 9 briefs $0.011 · 54 investigation turns **$0.129** — 92% of spend on 6.7% of accounts |
+| Default run (no boundary agent) | 16 queued, 16 briefs, ~$0.019 |
 
 **Assumptions, which are mine and not Cordilla's data:** 5 SDRs × 40 dials × 20 days ≈
 1,000 accounts worked monthly; $15k ACV; about $1 per enriched record; about 8 minutes per

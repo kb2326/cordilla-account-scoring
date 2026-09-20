@@ -83,14 +83,16 @@ Airflow or a cron triggers the run; the graph is what happens inside it.
 **Where the LLM is allowed.** One node: the rep's brief. It returns sentences of
 `{{placeholders}}` and no digits; code substitutes every value; a verifier rejects any number it
 typed itself, twice-failing drops to a template. No tools, no other accounts, no say in who gets
-called. Live on `claude-haiku-4-5-20251001` — **16 calls, $0.0187, 0 rejections** — with a
-documented stand-in when no key is present.
+called. Live on `claude-haiku-4-5-20251001` — **$0.019 a run, 0 rejections** — with a documented
+stand-in when no key is present.
 
-**Why not an autonomous agent?** The decisions worth automating — where to cut, what is
-too stale, who gets called — must be reproducible, explainable to a VP, and comparable
-against a control group. An LLM choosing them is none of those. I would change that for the
-~20 ambiguous accounts near the threshold, where an investigator deciding *what to check
-next* earns its cost. Next, not first.
+**Why so little is autonomous.** The decisions worth automating — where to cut, what is too stale,
+who gets called — must be reproducible, explainable to a VP, and comparable against a control
+group. An LLM choosing them is none of those. The exception is the ~20 accounts near the threshold
+where the rule is arbitrary: those get a real tool-calling loop (`--investigate`) that decides what
+to check, then recommends, with policy keeping veto. On the committed run it changed 17 decisions,
+mostly toward caution — and cost **$0.129 of the run's $0.140**, which is the argument for aiming
+it narrowly rather than at all 300.
 
 **Deployment.** Nightly against Salesforce, artifacts pinned by hash, run records to a
 warehouse, rollback on one flag. **Two weeks in shadow mode first**: score, record, publish

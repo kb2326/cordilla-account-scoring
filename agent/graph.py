@@ -284,8 +284,7 @@ def investigate(state: RunState, runtime: Runtime[Deps]) -> dict:
     candidates = investigator.select_boundary_accounts(frame, d.policy.call_threshold,
                                                        limit=d.investigate_limit)
 
-    results, transcripts, calls = {}, [], 0
-    for row in candidates.itertuples(index=False):
+    def investigate_one(row):
         ctx = investigator.account_context(row, frame, d.policy.call_threshold)
         final = app.invoke(
             {"messages": [("user", investigator.opening_message(ctx))], "account": ctx,
@@ -295,16 +294,47 @@ def investigate(state: RunState, runtime: Runtime[Deps]) -> dict:
             # outage waiting for a quiet weekend.
             {"recursion_limit": 12},
         )
-        recommendation = final.get("recommendation") or {}
-        results[row.account_id] = recommendation
-        calls += sum(1 for m in final["messages"] if m.type == "ai")
-        transcripts.append({
-            "account_id": row.account_id,
-            "rule_based": row.action,
-            "tools_called": final.get("checks_run", []),
-            "recommended": recommendation.get("action"),
-            "rationale": recommendation.get("rationale"),
-        })
+        return row, final
+
+    results, transcripts, calls = {}, [], 0
+    tokens_in = tokens_out = 0
+    # Same reasoning as write_briefs: 20 independent investigations, nothing shared.
+    # Sequentially this was 152s of wall clock, which is fine for a nightly batch and
+    # unbearable in front of a panel.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for row, final in pool.map(investigate_one, candidates.itertuples(index=False)):
+            recommendation = final.get("recommendation") or {}
+            results[row.account_id] = recommendation
+            for m in final["messages"]:
+                if m.type != "ai":
+                    continue
+                calls += 1
+                usage = getattr(m, "usage_metadata", None) or {}
+                tokens_in += int(usage.get("input_tokens") or 0)
+                tokens_out += int(usage.get("output_tokens") or 0)
+            transcripts.append({
+                "account_id": row.account_id,
+                "rule_based": row.action,
+                "tools_called": final.get("checks_run", []),
+                "recommended": recommendation.get("action"),
+                "rationale": recommendation.get("rationale"),
+            })
+    transcripts.sort(key=lambda t: t["account_id"])
+
+    # The investigator spends real money and it belongs in the same cost line as the
+    # briefs. Leaving it out would make "cost is measured" quietly false - it is more
+    # than half the model spend on a run that uses it.
+    investigation_usd = round(tokens_in / 1e6 * llm.LIVE_PRICE_INPUT_PER_M
+                              + tokens_out / 1e6 * llm.LIVE_PRICE_OUTPUT_PER_M, 6)
+    cost = dict(state.get("cost") or {"llm_calls": 0, "prompt_tokens": 0,
+                                      "completion_tokens": 0, "usd": 0.0})
+    cost["llm_calls"] = cost.get("llm_calls", 0) + calls
+    cost["prompt_tokens"] = cost.get("prompt_tokens", 0) + tokens_in
+    cost["completion_tokens"] = cost.get("completion_tokens", 0) + tokens_out
+    cost["usd"] = round(cost.get("usd", 0.0) + investigation_usd, 6)
+    cost["investigation_usd"] = investigation_usd
+    cost["model"] = llm.LIVE_MODEL
+    cost["mocked"] = False
 
     reviewed = investigator.apply_recommendations(frame, results, d.policy.call_threshold)
     # The queue is built FROM actions, and we have just changed actions - so it has to
@@ -316,11 +346,12 @@ def investigate(state: RunState, runtime: Runtime[Deps]) -> dict:
 
     changed = sum(1 for t in transcripts if t["recommended"] and t["recommended"] != t["rule_based"])
     return {
+        "cost": cost,
         "investigation": {
             "ran": True, "accounts": len(transcripts), "llm_calls": calls,
             "changed_from_rules": changed,
             "vetoed": int(d.workspace["frame"].investigator_vetoed.notna().sum()),
-            "model": llm.LIVE_MODEL,
+            "model": llm.LIVE_MODEL, "usd": investigation_usd,
         },
         "counts": summarise(d.workspace["frame"]),
         "events": [_event("investigate", t0, accounts=len(transcripts), changed=changed)],
