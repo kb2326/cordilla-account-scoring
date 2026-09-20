@@ -141,6 +141,10 @@ def fact_set(row) -> dict:
     """
     facts = {
         "account_id": row.account_id,
+        # The driver phrases are built by code in explain_batch and contain numbers,
+        # so they travel as a placeholder like every other value. The model may say
+        # {{evidence}}; it may not retype what is inside it.
+        "evidence": " · ".join(d["phrase"] for d in row.drivers) if getattr(row, "drivers", None) else "no standout signals",
         "account_type": row.account_type,
         "industry": row.industry,
         "employee_count": int(row.employee_count),

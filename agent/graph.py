@@ -44,6 +44,7 @@ from langgraph.types import RetryPolicy, interrupt
 
 from monitoring import checks as monitoring_checks
 
+from . import brief as brief_mod
 from .contracts import add_quality_flags, validate_batch
 from .emit import new_run_record, write_outputs
 from .explain import baseline_from, explain_batch
@@ -57,6 +58,8 @@ class RunState(TypedDict, total=False):
     batch_health: dict
     counts: dict
     cost: dict
+    brief_attempt: int            # drives the write -> verify -> write cycle
+    briefs_pending: list          # account_ids still without an accepted brief
     written: dict
     halted: bool
     approved: bool
@@ -74,6 +77,8 @@ class Deps:
     accounts_path: Path
     output_dir: Path
     auto_approve: bool = False   # CLI sets this; a human answers otherwise
+    max_brief_attempts: int = 2  # then the deterministic template takes over
+    hallucinate: bool = False    # demo switch: make the stand-in type a number
     # Run-scoped scratch space for the batch itself. Context is not checkpointed,
     # so this is the seam between "state worth replaying" and "data too big and
     # too un-serializable to belong in a checkpoint".
@@ -150,6 +155,95 @@ def triage(state: RunState, runtime: Runtime[Deps]) -> dict:
     return {"counts": counts, "events": [_event("triage", t0, **counts["by_action"])]}
 
 
+
+def write_briefs(state: RunState, runtime: Runtime[Deps]) -> dict:
+    """Ask the language model for a brief per queued account still needing one.
+
+    The model writes sentences containing {{placeholders}} and no digits. It never
+    sees the frame, other accounts, or any tool - it is handed a fact set and asked
+    for two sentences. That is the whole of its authority in this system.
+    """
+    t0 = time.perf_counter()
+    d = runtime.context
+    frame = d.workspace["frame"]
+    drafts = d.workspace.setdefault("drafts", {})
+
+    pending = state.get("briefs_pending") or list(frame[frame.queued].account_id)
+    cost = dict(state.get("cost") or {"llm_calls": 0, "prompt_tokens": 0,
+                                      "completion_tokens": 0, "usd": 0.0})
+
+    for account_id in pending:
+        row = frame[frame.account_id == account_id].iloc[0]
+        completion = brief_mod.generate(row, hallucinate=d.hallucinate)
+        drafts[account_id] = completion.text
+        cost["llm_calls"] += 1
+        cost["prompt_tokens"] += completion.prompt_tokens
+        cost["completion_tokens"] += completion.completion_tokens
+        cost["usd"] = round(cost["usd"] + completion.usd, 6)
+        cost["model"] = completion.model
+        cost["mocked"] = completion.mocked
+
+    cost["pricing"] = "ASSUMED rates in agent/llm.py; token counts measured on the real prompt"
+    attempt = state.get("brief_attempt", 0) + 1
+    return {
+        "cost": cost,
+        "brief_attempt": attempt,
+        "events": [_event("write_briefs", t0, attempt=attempt, drafted=len(pending))],
+    }
+
+
+def verify_briefs(state: RunState, runtime: Runtime[Deps]) -> dict:
+    """Reject any brief containing a number the model typed itself.
+
+    Not a small problem: a rep reads this aloud to a customer. Failures go back to
+    write_briefs; anything still failing after the attempt budget gets the
+    deterministic template instead of a third roll of the dice.
+    """
+    t0 = time.perf_counter()
+    d = runtime.context
+    frame = d.workspace["frame"]
+    briefs = d.workspace.setdefault("briefs", {})
+    drafts = d.workspace.get("drafts", {})
+
+    still_failing, rejected = [], []
+    for account_id, draft in list(drafts.items()):
+        row = frame[frame.account_id == account_id].iloc[0]
+        text, violations = brief_mod.accept(row, draft)
+        if text is not None:
+            briefs[account_id] = brief_mod.Brief(
+                account_id=account_id, text=text,
+                attempts=state["brief_attempt"], verified=True)
+            drafts.pop(account_id)
+        else:
+            rejected.append((account_id, violations))
+            still_failing.append(account_id)
+
+    if state["brief_attempt"] >= d.max_brief_attempts:
+        for account_id in still_failing:
+            row = frame[frame.account_id == account_id].iloc[0]
+            briefs[account_id] = brief_mod.Brief(
+                account_id=account_id, text=brief_mod.fallback_text(row),
+                attempts=state["brief_attempt"], verified=False, fell_back=True,
+                violations=[v for a, vs in rejected if a == account_id for v in vs])
+            drafts.pop(account_id, None)
+        still_failing = []
+
+    cost = dict(state["cost"])
+    cost["rejected_by_verifier"] = cost.get("rejected_by_verifier", 0) + len(rejected)
+    cost["fell_back_to_template"] = sum(1 for b in briefs.values() if b.fell_back)
+    cost["briefs_written"] = len(briefs)
+    return {
+        "briefs_pending": still_failing,
+        "cost": cost,
+        "events": [_event("verify_briefs", t0, rejected=len(rejected), accepted=len(briefs))],
+    }
+
+
+def _route_after_verify(state: RunState) -> str:
+    """The cycle: anything still failing goes back for another attempt."""
+    return "write_briefs" if state.get("briefs_pending") else "publish"
+
+
 def publish(state: RunState, runtime: Runtime[Deps]) -> dict:
     """Write the outputs - but pause first if the batch looked unusual.
 
@@ -191,11 +285,14 @@ def publish(state: RunState, runtime: Runtime[Deps]) -> dict:
             "assumptions": d.policy.notes,
         },
         counts=state["counts"],
-        cost=state.get("cost", {"usd": 0.0, "llm_calls": 0, "note": "no language model calls in this run"}),
+        cost=state.get("cost", {"usd": 0.0, "llm_calls": 0}),
         batch_health=health,
         node_ms={e["node"]: e["ms"] for e in state["events"]},
     )
-    written = write_outputs(frame, record, d.output_dir)
+    written = write_outputs(
+        frame, record, d.output_dir,
+        briefs_markdown=brief_mod.render_markdown(frame, d.workspace.get("briefs", {})),
+    )
     return {
         "approved": True,
         "written": {k: str(v) for k, v in written.items()},
@@ -219,6 +316,11 @@ def build_graph():
     g.add_node("score", score, retry_policy=RetryPolicy(max_attempts=2))
     g.add_node("explain", explain)
     g.add_node("triage", triage)
+    # The language model step, and the check on it. Two nodes rather than one
+    # function with a loop inside, so the retry is a visible cycle in the graph
+    # instead of control flow buried in a helper.
+    g.add_node("write_briefs", write_briefs, retry_policy=RetryPolicy(max_attempts=2))
+    g.add_node("verify_briefs", verify_briefs)
     g.add_node("publish", publish)
 
     g.add_edge(START, "load_batch")
@@ -226,7 +328,10 @@ def build_graph():
     g.add_conditional_edges("quality_gate", _route_after_gate, {"halt": "halt", "score": "score"})
     g.add_edge("score", "explain")
     g.add_edge("explain", "triage")
-    g.add_edge("triage", "publish")
+    g.add_edge("triage", "write_briefs")
+    g.add_edge("write_briefs", "verify_briefs")
+    g.add_conditional_edges("verify_briefs", _route_after_verify,
+                            {"write_briefs": "write_briefs", "publish": "publish"})
     g.add_edge("publish", END)
     g.add_edge("halt", END)
     return g.compile(checkpointer=InMemorySaver())

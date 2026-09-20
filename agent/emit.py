@@ -29,7 +29,8 @@ DECISION_COLUMNS = [
 ]
 
 
-def write_outputs(df: pd.DataFrame, run_record: dict, output_dir: Path) -> dict[str, Path]:
+def write_outputs(df: pd.DataFrame, run_record: dict, output_dir: Path,
+                  briefs_markdown: str | None = None) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
 
@@ -59,6 +60,9 @@ def write_outputs(df: pd.DataFrame, run_record: dict, output_dir: Path) -> dict[
     with runs_path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(run_record, default=str) + "\n")
     written["runs"] = runs_path
+
+    if briefs_markdown:
+        written["briefs"] = _text(briefs_markdown, output_dir / "briefs.md")
 
     written["summary"] = _text(_summary_text(df, run_record), output_dir / "run_summary.txt")
     return written
