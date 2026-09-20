@@ -1,0 +1,12 @@
+# The provided files must arrive byte-identical on every machine.
+#
+# Git's default on Windows converts LF to CRLF on checkout. That leaves the content
+# unchanged but the BYTES different, which breaks two things: the sha256 values
+# analysis/findings.json records for provenance, and the exercise's instruction that
+# the provided data is not to be modified. Marking them -text switches the
+# conversion off, so what we were given is what every reviewer gets.
+data/*.csv -text
+model/*.pkl -text binary
+
+# Everything else can follow the platform's convention.
+* text=auto
