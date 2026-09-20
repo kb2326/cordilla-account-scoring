@@ -1,0 +1,236 @@
+"""The run, as a state machine.
+
+Why a graph and not a script - the honest version. The scoring path here is
+deterministic, and stripped of the gate below this is about 150 lines of straight
+Python. Four things earn the framework:
+
+  1. the batch can stop. quality_gate routes to a halt that publishes nothing,
+     and that branch is visible in the diagram rather than buried in an if;
+  2. publishing pauses for a human when the batch looks odd - interrupt() is a
+     first-class pause with the state preserved, not a boolean threaded through
+     three functions;
+  3. each decision is a node that can be invoked on its own in a REPL, which is
+     how the policy bug in commit 67c2ec3 was found;
+  4. retries and their reasons are declared per node instead of hand-rolled.
+
+What LangGraph is NOT doing here is scheduling. In production this run is
+triggered by Airflow or a Cloud Run job on a cron; the graph is what happens
+inside one run. Conflating those two is how people end up with a graph library
+impersonating a scheduler.
+
+State note, learned the hard way: checkpointed state must be serializable, and
+that includes InMemorySaver - it msgpack-encodes everything on the way in. My
+first version carried the DataFrame in state and died on "Type is not msgpack
+serializable: DataFrame". So state holds decisions, counts and health - things
+worth replaying - while the batch itself lives in a run-scoped workspace passed
+through context, which is never checkpointed. A distributed setup would go one
+step further and put a parquet path in state instead of a frame anywhere.
+"""
+
+from __future__ import annotations
+
+import operator
+import time
+import uuid
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Annotated, Any, TypedDict
+
+import pandas as pd
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph import END, START, StateGraph
+from langgraph.runtime import Runtime
+from langgraph.types import RetryPolicy, interrupt
+
+from monitoring import checks as monitoring_checks
+
+from .contracts import add_quality_flags, validate_batch
+from .emit import new_run_record, write_outputs
+from .explain import baseline_from, explain_batch
+from .policy import PolicyConfig, apply_capacity, assign_actions, summarise
+from .scoring import LoadedModel, score_batch
+
+
+class RunState(TypedDict, total=False):
+    run_id: str
+    rows: int                    # the batch lives in Deps.workspace, not here
+    batch_health: dict
+    counts: dict
+    cost: dict
+    written: dict
+    halted: bool
+    approved: bool
+    events: Annotated[list, operator.add]   # append-only; every node adds one
+
+
+@dataclass
+class Deps:
+    """Everything the run needs from outside. Injected, never held in state."""
+    model: LoadedModel
+    policy: PolicyConfig
+    baseline: dict               # analysis/findings.json
+    reference: pd.DataFrame      # training data, for explanation baselines
+    as_of: pd.Timestamp
+    accounts_path: Path
+    output_dir: Path
+    auto_approve: bool = False   # CLI sets this; a human answers otherwise
+    # Run-scoped scratch space for the batch itself. Context is not checkpointed,
+    # so this is the seam between "state worth replaying" and "data too big and
+    # too un-serializable to belong in a checkpoint".
+    workspace: dict = field(default_factory=dict)
+
+
+def _event(node: str, started: float, **extra: Any) -> dict:
+    return {"node": node, "ms": round((time.perf_counter() - started) * 1000, 1), **extra}
+
+
+# --------------------------------------------------------------------------- nodes
+
+def load_batch(state: RunState, runtime: Runtime[Deps]) -> dict:
+    t0 = time.perf_counter()
+    d = runtime.context
+    frame = pd.read_csv(d.accounts_path)
+    # Structural validation raises here rather than returning a status: a batch
+    # with missing columns or impossible values is not a degraded run, it is not
+    # a run at all.
+    validate_batch(frame).raise_if_failed()
+    d.workspace["frame"] = add_quality_flags(frame, d.as_of)
+    return {"rows": len(frame), "events": [_event("load_batch", t0, rows=len(frame))]}
+
+
+def quality_gate(state: RunState, runtime: Runtime[Deps]) -> dict:
+    """Does this batch look like the population the model was fitted on?"""
+    t0 = time.perf_counter()
+    health = monitoring_checks.run_input_checks(runtime.context.workspace["frame"], runtime.context.baseline)
+    return {
+        "batch_health": health.to_dict(),
+        "events": [_event("quality_gate", t0, status=health.status)],
+    }
+
+
+def halt(state: RunState, runtime: Runtime[Deps]) -> dict:
+    """A red batch publishes nothing. A late queue costs a morning; a wrong one costs trust."""
+    t0 = time.perf_counter()
+    return {"halted": True, "events": [_event("halt", t0)]}
+
+
+def score(state: RunState, runtime: Runtime[Deps]) -> dict:
+    t0 = time.perf_counter()
+    frame = runtime.context.workspace["frame"].copy()
+    frame["score"] = score_batch(runtime.context.model, frame)
+    health = monitoring_checks.run_score_checks(frame["score"], runtime.context.baseline)
+    merged = monitoring_checks.merge(
+        monitoring_checks.BatchHealth(
+            status=state["batch_health"]["status"],
+            checks=[monitoring_checks.Check(**c) for c in state["batch_health"]["checks"]],
+        ),
+        health,
+    )
+    runtime.context.workspace["frame"] = frame
+    return {
+        "batch_health": merged.to_dict(),
+        "events": [_event("score", t0, mean=round(float(frame.score.mean()), 4))],
+    }
+
+
+def explain(state: RunState, runtime: Runtime[Deps]) -> dict:
+    t0 = time.perf_counter()
+    d = runtime.context
+    d.workspace["frame"] = explain_batch(d.model, d.workspace["frame"], baseline_from(d.reference), d.as_of)
+    return {"events": [_event("explain", t0)]}
+
+
+def triage(state: RunState, runtime: Runtime[Deps]) -> dict:
+    t0 = time.perf_counter()
+    d = runtime.context
+    frame = assign_actions(d.workspace["frame"], d.policy)
+    frame = apply_capacity(frame, d.policy)
+    d.workspace["frame"] = frame
+    counts = summarise(frame)
+    return {"counts": counts, "events": [_event("triage", t0, **counts["by_action"])]}
+
+
+def publish(state: RunState, runtime: Runtime[Deps]) -> dict:
+    """Write the outputs - but pause first if the batch looked unusual.
+
+    The interrupt is deliberately placed before any file is written, and the node
+    re-runs from the top on resume, so nothing is half-published while waiting.
+    """
+    t0 = time.perf_counter()
+    d = runtime.context
+    health = state["batch_health"]
+    approved = True
+
+    if health["status"] != monitoring_checks.GREEN and not d.auto_approve:
+        decision = interrupt({
+            "question": "This batch failed one or more checks. Publish it to reps anyway?",
+            "status": health["status"],
+            "alerts": health["alerts"],
+            "would_queue": state["counts"]["queued"],
+        })
+        approved = bool(decision.get("approve")) if isinstance(decision, dict) else bool(decision)
+
+    if not approved:
+        return {"approved": False, "halted": True, "events": [_event("publish", t0, published=False)]}
+
+    frame = d.workspace["frame"]
+    total_ms = sum(e["ms"] for e in state["events"]) + (time.perf_counter() - t0) * 1000
+    record = new_run_record(
+        run_id=state["run_id"],
+        as_of=str(d.as_of.date()),
+        duration_ms=round(total_ms, 1),
+        input={"file": d.accounts_path.name, "rows": int(len(frame))},
+        model={"sklearn": d.model.running_sklearn, "description": d.model.describe()},
+        config={
+            "call_threshold": d.policy.call_threshold,
+            "nurture_threshold": d.policy.nurture_threshold,
+            "stale_after_days": d.policy.stale_after_days,
+            "expired_after_days": d.policy.expired_after_days,
+            "capacity": d.policy.capacity,
+            "holdout_share": d.policy.holdout_share,
+            "assumptions": d.policy.notes,
+        },
+        counts=state["counts"],
+        cost=state.get("cost", {"usd": 0.0, "llm_calls": 0, "note": "no language model calls in this run"}),
+        batch_health=health,
+        node_ms={e["node"]: e["ms"] for e in state["events"]},
+    )
+    written = write_outputs(frame, record, d.output_dir)
+    return {
+        "approved": True,
+        "written": {k: str(v) for k, v in written.items()},
+        "events": [_event("publish", t0, published=True)],
+    }
+
+
+def _route_after_gate(state: RunState) -> str:
+    """Red stops the run. Amber continues to a human at the publish step."""
+    return "halt" if state["batch_health"]["status"] == monitoring_checks.RED else "score"
+
+
+def build_graph():
+    g = StateGraph(RunState, context_schema=Deps)
+    # Reading a file and calling a model are the only steps that can fail for
+    # reasons a retry would fix. The rest are pure functions over a DataFrame:
+    # retrying them would just fail again more slowly.
+    g.add_node("load_batch", load_batch, retry_policy=RetryPolicy(max_attempts=2))
+    g.add_node("quality_gate", quality_gate)
+    g.add_node("halt", halt)
+    g.add_node("score", score, retry_policy=RetryPolicy(max_attempts=2))
+    g.add_node("explain", explain)
+    g.add_node("triage", triage)
+    g.add_node("publish", publish)
+
+    g.add_edge(START, "load_batch")
+    g.add_edge("load_batch", "quality_gate")
+    g.add_conditional_edges("quality_gate", _route_after_gate, {"halt": "halt", "score": "score"})
+    g.add_edge("score", "explain")
+    g.add_edge("explain", "triage")
+    g.add_edge("triage", "publish")
+    g.add_edge("publish", END)
+    g.add_edge("halt", END)
+    return g.compile(checkpointer=InMemorySaver())
+
+
+def new_run_id() -> str:
+    return str(uuid.uuid4())
