@@ -30,23 +30,21 @@ Two caveats a VP should hear before anyone gets excited:
   out-of-bag trace is sobering: **19 of 40 trees made held-out loss worse**, the last
   ten net negative. It generalises, thinly.
 
-**What I would commit to.** Two independent routes agree on magnitude: the decile table
-says up to 4.1x, and the brief's own rates — under 1% for cold accounts, low single
-digits for engaged ones — imply 2–4x purely from shifting rep time toward engaged
-accounts. **Plan on 2x**, half the measured ceiling, and let the holdout produce the
-real number.
+**What I would commit to.** Two routes agree on magnitude: the decile table says up to
+4.1x, and the brief's own rates — under 1% cold, low single digits for engaged accounts
+— imply 2–4x from shifting rep time alone. **Plan on 2x**, half the ceiling, and let the
+holdout produce the real number.
 
 In rep terms: **~15 calls per win** at the base rate, **~3.4** in the top decile
 (in-sample). *Assumption:* 5 SDRs × 40 dials × 20 days ≈ 1,000 accounts worked monthly;
-at 1% that is ~10 wins, at 2x ~20. At an assumed $15k ACV the delta is roughly **$150k
-new ARR monthly** — but the assumption carrying that sentence is the ACV, not the
-model. The claim I defend is calls-per-win.
+at 1% that is ~10 wins, at 2x ~20, worth roughly **$150k new ARR monthly** at an assumed
+$15k ACV. The assumption carrying that last sentence is the ACV, not the model — the
+claim I defend is calls-per-win.
 
-**Being wrong, each way.** A false positive costs ~8 minutes of rep time. A false
-negative defers an opportunity — the account returns next run, unless a competitor got
-there first. Expected value says over-include; **rep trust says the opposite**, and
-trust is what the last effort lost. So we protect precision at the top of the queue at
-the cost of recall.
+**Being wrong, each way.** A false positive costs ~8 minutes. A false negative defers
+an opportunity — the account returns next run, unless a competitor got there first.
+Expected value says over-include; **rep trust says the opposite**, and trust is what the
+last effort lost. So we protect precision at the top at the cost of recall.
 
 **The finding that reframes it.** **73% of the batch runs on information over 90 days
 old**, and every feature is a 90-day activity window — so for **218 of 300 accounts the
@@ -91,7 +89,7 @@ the ~20 genuinely ambiguous accounts near the threshold, where an investigator d
 *what to check next* earns its cost. That is the next thing to build, not the first.
 
 **Deployment.** Nightly against Salesforce, artifacts pinned by hash, run records to a
-warehouse. **Two weeks in shadow mode first** — score, record, publish nothing, compare
+warehouse. **Two weeks in shadow mode first**: score, record, publish nothing, compare
 against what reps chose unaided. Rollback is one flag.
 
 ---
@@ -111,9 +109,9 @@ Zero exceptions in all three. The second is the point: ageing every snapshot by 
 days leaves the mean score **exactly** where it was.
 
 **Three clocks.** *Daily:* intent coverage (baseline 38.7%, amber ±5pp, red ±10pp),
-staleness (median 121 days), batch size, score distribution — no labels needed, so the
-only signals that catch something this week. *Four-weekly:* rep dispositions by tier.
-*Quarterly:* realised conversion, queued versus control.
+staleness (median 121 days), batch size, score distribution — needing no labels, these
+are the only signals that catch something this week. *Four-weekly:* rep dispositions by
+tier. *Quarterly:* realised conversion, queued versus control.
 
 **Problem versus noise.** At ~30 queued accounts weekly, one week's disposition rate
 has a standard error of **7.3pp** — 20% to 30% is noise. Over four weeks it falls to
@@ -127,8 +125,8 @@ alert an owner and a first move.
 
 **Proving it works.** 30% of the call tier is held back each run, assigned by hashing
 the account ID so an account never drifts between treated and control. Without that
-counterfactual nobody can separate "the model worked" from "the quarter was good" — and
-the run summary prints lift as **pending**, not estimated, until the data exists.
+counterfactual nobody can separate "the model worked" from "the quarter was good" — so
+the run summary prints lift as **pending**, never estimated.
 
 ---
 
@@ -137,6 +135,5 @@ the run summary prints lift as **pending**, not estimated, until the data exists
 The 4.1x is in-sample. Reason codes use leave-one-out ablation, which ignores feature
 interactions. The LLM is mocked, so cost uses assumed rates over measured tokens.
 Capacity and ACV are my assumptions. And **101 training rows are younger than 90 days,
-all labelled "did not convert"** because their outcome window had not closed — harmless
-today, but repeated in a rolling retrain it decays the model quietly. The runbook has
-an assertion for that.
+all labelled "did not convert"** because their window had not closed — harmless today,
+but repeated in a rolling retrain it decays the model quietly.
