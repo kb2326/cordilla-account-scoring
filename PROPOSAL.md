@@ -11,9 +11,8 @@ Assumptions are labelled. 1,180 words of prose plus two tables.*
 
 ## 1 · What this is worth
 
-**The decision.** An SDR picks tomorrow's ~40 calls from tens of thousands of accounts.
-Today that is guesswork; after this the queue is chosen, ordered, bounded, and carries a
-reason the rep can read.
+**The decision.** An SDR picks tomorrow's ~40 calls from tens of thousands of accounts — today
+by guesswork, after this chosen, ordered, bounded, and carrying a reason the rep can read.
 
 **What the model can do.** Its signal is concentrated: the top decile of its training
 population converted at **26.7% against a 6.5% base — 4.1x**. The second is 1.28x, and
@@ -34,20 +33,16 @@ Two caveats before anyone gets excited:
 — imply 2–4x from shifting rep time alone. **Plan on 2x**, half the ceiling, and let the
 holdout produce the real number.
 
-In rep terms: **~15 calls per win** at the base rate, **~3.4** in the top decile
-(in-sample). *Assumptions, benchmarked rather than invented:* 5 SDRs × 40 dials × 20 days ≈ 1,000
-accounts worked monthly — 40–50 dials is the published 2026 band for outbound SDRs, and 1,000
-accounts is the conservative end of 50–150 prospects per rep per week. At 1% that is ~10 wins, at
-2x ~20, worth roughly **$150k new ARR monthly** at a **$15k ACV** — the SMB/mid-market boundary
-against a 2026 cross-industry median of $24k, so again the cautious end. The assumption carrying
-that last sentence is the ACV, not the model; the claim I defend is calls-per-win.
+In rep terms: **~15 calls per win** at the base rate, **~3.4** in the top decile (in-sample).
+*Assumptions, benchmarked not invented:* 5 SDRs × 40 dials × 20 days ≈ 1,000 accounts monthly
+(2026 bands: 40–50 dials/day, 50–150 prospects/rep/week — we sit low), and **$15k ACV** against a
+2026 median of $24k. At 1% that is ~10 wins; at 2x, ~20, worth roughly **$150k new ARR monthly**.
+The ACV carries that last sentence, not the model — the claim I defend is calls-per-win.
 
-**Do the gates actually help?** `analysis/policy_backtest.py` tests them against the 1,099
-labelled accounts whose outcome window closed. Honest answer: not provably, at this sample size.
-Freshness points the right way — inside the top tier, accounts over a year old convert at 21.4%
-against 31.5% — but every confidence interval overlaps, and gated and ungated queues of 25 and 50
-are within noise. The gates stay on structural grounds, not because this test blessed them, and
-that gap is precisely what the control group exists to close.
+**Do the gates help?** `analysis/policy_backtest.py` tests them on the 1,099 labelled accounts
+whose window closed. Not provably, at this sample size: freshness points the right way (21.4% vs
+31.5% inside the top tier) but every interval overlaps. The gates stay on structural grounds, and
+that gap is what the control group exists to close.
 
 **Being wrong, each way.** A false positive costs ~8 minutes. A false negative defers
 an opportunity — the account returns next run, unless a competitor got there first.
@@ -85,12 +80,11 @@ per node. Counter-argument, honestly: the scoring path is deterministic, and str
 of the gate this is ~150 lines of plain Python. **Scheduling is not LangGraph's job** —
 Airflow or a cron triggers the run; the graph is what happens inside it.
 
-**Where the LLM is allowed.** One node: the rep's brief. It gets a fact set, returns
-sentences containing `{{placeholders}}` and no digits, and code substitutes every value. A
-verifier rejects any number the model typed itself; failing twice drops to a template. No tools,
-no other accounts, no say in who gets called. Live on `claude-haiku-4-5-20251001` — **16 calls,
-$0.0186, 0 rejections** in the committed run — with a documented stand-in when no key is present,
-so the repo runs for a reviewer either way.
+**Where the LLM is allowed.** One node: the rep's brief. It returns sentences of
+`{{placeholders}}` and no digits; code substitutes every value; a verifier rejects any number it
+typed itself, twice-failing drops to a template. No tools, no other accounts, no say in who gets
+called. Live on `claude-haiku-4-5-20251001` — **16 calls, $0.0187, 0 rejections** — with a
+documented stand-in when no key is present.
 
 **Why not an autonomous agent?** The decisions worth automating — where to cut, what is
 too stale, who gets called — must be reproducible, explainable to a VP, and comparable
