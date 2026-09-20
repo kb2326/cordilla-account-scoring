@@ -1,0 +1,277 @@
+{
+  "meta": {
+    "as_of": "2026-08-01",
+    "horizon_days": 90,
+    "input_sha256": {
+      "training_data.csv": "af7ac177ceddb80c",
+      "accounts_to_score.csv": "1a09c6390634ff1b",
+      "model.pkl": "fc2cd6aa4400c6bc"
+    },
+    "regenerate_with": "python analysis/profile.py"
+  },
+  "data_shape": {
+    "train_rows": 1200,
+    "score_rows": 300,
+    "accounts_in_both_files": 0,
+    "max_rows_per_account": 1,
+    "train_distinct_snapshot_dates": 511,
+    "score_distinct_snapshot_dates": 197,
+    "train_date_range": [
+      "2024-08-20",
+      "2026-07-31"
+    ],
+    "score_date_range": [
+      "2024-09-25",
+      "2026-08-01"
+    ]
+  },
+  "base_rate": {
+    "positives": 78,
+    "rate": 0.065,
+    "packet_says_real_world_cold": "well under 1%",
+    "by_account_type": {
+      "Former Customer": {
+        "n": 166,
+        "rate": 0.07228915662650602
+      },
+      "Prospect": {
+        "n": 632,
+        "rate": 0.06645569620253164
+      },
+      "Suspect": {
+        "n": 402,
+        "rate": 0.05970149253731343
+      }
+    }
+  },
+  "label_censoring": {
+    "rows_with_immature_window": 101,
+    "conversions_among_them": 0,
+    "share_of_training_rows": 0.08416666666666667,
+    "base_rate_all_rows": 0.065,
+    "base_rate_mature_rows_only": 0.07097361237488627
+  },
+  "freshness": {
+    "train": {
+      "median_age_days": 280.0,
+      "p25_age_days": 173.0,
+      "p75_age_days": 404.25,
+      "max_age_days": 711,
+      "share_older_than_90d": 0.9141666666666667,
+      "share_older_than_365d": 0.3275,
+      "outcome_window_already_closed": 1097
+    },
+    "score": {
+      "median_age_days": 121.0,
+      "p25_age_days": 87.0,
+      "p75_age_days": 257.0,
+      "max_age_days": 675,
+      "share_older_than_90d": 0.7266666666666667,
+      "share_older_than_365d": 0.14,
+      "outcome_window_already_closed": 218
+    }
+  },
+  "coverage": {
+    "intent_missing_train": 0.40166666666666667,
+    "intent_missing_score": 0.38666666666666666,
+    "imputed_with_training_median": 25.3,
+    "conversion_when_intent_present": 0.08217270194986072,
+    "conversion_when_intent_missing": 0.03941908713692946,
+    "coverage_by_employee_quartile": {
+      "(2.999, 29.0]": 0.592,
+      "(29.0, 67.0]": 0.572,
+      "(67.0, 139.0]": 0.614,
+      "(139.0, 4429.0]": 0.616
+    },
+    "zero_share_train": {
+      "mql_count_90d": 0.48583333333333334,
+      "trial_started": 0.8141666666666667,
+      "trial_active_users": 0.875,
+      "web_touchpoints_90d": 0.3283333333333333,
+      "sales_contacts_90d": 0.4058333333333333
+    },
+    "contradiction_trial_users_without_trial": 0
+  },
+  "model_card": {
+    "sklearn_version_at_save": "unknown",
+    "sklearn_version_running": "1.5.2",
+    "classifier": "GradientBoostingClassifier",
+    "n_estimators": 40,
+    "max_depth": 2,
+    "subsample": 0.7,
+    "feature_contract": [
+      "account_type",
+      "employee_count",
+      "industry",
+      "intent_score",
+      "mql_count_90d",
+      "trial_started",
+      "trial_active_users",
+      "web_touchpoints_90d",
+      "sales_contacts_90d"
+    ],
+    "encoded_feature_count": 16,
+    "top_importances": {
+      "num__intent_score": 0.2712,
+      "num__web_touchpoints_90d": 0.2139,
+      "num__sales_contacts_90d": 0.2092,
+      "num__employee_count": 0.1113,
+      "num__trial_started": 0.0618,
+      "num__trial_active_users": 0.0479
+    },
+    "oob_total_improvement": 0.009732540979130677,
+    "oob_last10_improvement": -0.009876419995386743,
+    "oob_trees_that_made_it_worse": 19,
+    "oob_tree_count": 40
+  },
+  "in_sample_performance": {
+    "caveat": "IN-SAMPLE: measured on the rows the model was trained on. An upper bound, not an estimate.",
+    "auc": 0.759,
+    "pr_auc": 0.2309,
+    "pr_auc_random_baseline": 0.065,
+    "brier": 0.0573,
+    "brier_if_always_predicting_base_rate": 0.0608,
+    "calls_per_win_at_base_rate": 15.4,
+    "deciles": [
+      {
+        "decile": 1,
+        "n": 120,
+        "conversions": 32,
+        "actual_rate": 0.2667,
+        "mean_predicted": 0.1386,
+        "lift_vs_base": 4.1
+      },
+      {
+        "decile": 2,
+        "n": 120,
+        "conversions": 10,
+        "actual_rate": 0.0833,
+        "mean_predicted": 0.0984,
+        "lift_vs_base": 1.28
+      },
+      {
+        "decile": 3,
+        "n": 120,
+        "conversions": 11,
+        "actual_rate": 0.0917,
+        "mean_predicted": 0.0798,
+        "lift_vs_base": 1.41
+      },
+      {
+        "decile": 4,
+        "n": 120,
+        "conversions": 7,
+        "actual_rate": 0.0583,
+        "mean_predicted": 0.0666,
+        "lift_vs_base": 0.9
+      },
+      {
+        "decile": 5,
+        "n": 120,
+        "conversions": 1,
+        "actual_rate": 0.0083,
+        "mean_predicted": 0.0563,
+        "lift_vs_base": 0.13
+      },
+      {
+        "decile": 6,
+        "n": 120,
+        "conversions": 8,
+        "actual_rate": 0.0667,
+        "mean_predicted": 0.0496,
+        "lift_vs_base": 1.03
+      },
+      {
+        "decile": 7,
+        "n": 120,
+        "conversions": 2,
+        "actual_rate": 0.0167,
+        "mean_predicted": 0.0462,
+        "lift_vs_base": 0.26
+      },
+      {
+        "decile": 8,
+        "n": 120,
+        "conversions": 2,
+        "actual_rate": 0.0167,
+        "mean_predicted": 0.0436,
+        "lift_vs_base": 0.26
+      },
+      {
+        "decile": 9,
+        "n": 120,
+        "conversions": 3,
+        "actual_rate": 0.025,
+        "mean_predicted": 0.042,
+        "lift_vs_base": 0.38
+      },
+      {
+        "decile": 10,
+        "n": 120,
+        "conversions": 2,
+        "actual_rate": 0.0167,
+        "mean_predicted": 0.0403,
+        "lift_vs_base": 0.26
+      }
+    ],
+    "top_n": {
+      "50": {
+        "conversions": 15,
+        "rate": 0.3,
+        "lift": 4.62,
+        "calls_per_win": 3.3
+      },
+      "100": {
+        "conversions": 29,
+        "rate": 0.29,
+        "lift": 4.46,
+        "calls_per_win": 3.4
+      },
+      "200": {
+        "conversions": 39,
+        "rate": 0.195,
+        "lift": 3.0,
+        "calls_per_win": 5.1
+      },
+      "300": {
+        "conversions": 49,
+        "rate": 0.1633,
+        "lift": 2.51,
+        "calls_per_win": 6.1
+      }
+    },
+    "max_score": 0.2698,
+    "accounts_flagged_at_threshold_0_5": 0,
+    "score_percentiles": {
+      "0.50": 0.0525,
+      "0.70": 0.0727,
+      "0.90": 0.1088,
+      "0.95": 0.1289
+    }
+  },
+  "drift_baseline": {
+    "psi_by_feature": {
+      "employee_count": 0.0422,
+      "intent_score": 0.0575,
+      "mql_count_90d": 0.0228,
+      "trial_started": 0.0,
+      "trial_active_users": 0.0047,
+      "web_touchpoints_90d": 0.0313,
+      "sales_contacts_90d": 0.0127
+    },
+    "psi_model_score": 0.0061,
+    "score_distribution": {
+      "train": {
+        "mean": 0.0661,
+        "p90": 0.1088,
+        "max": 0.2698
+      },
+      "score": {
+        "mean": 0.0655,
+        "p90": 0.1063,
+        "max": 0.2094
+      }
+    },
+    "threshold_convention": "PSI 0.1 warn, 0.25 alert. Measured today every feature is below 0.06."
+  }
+}

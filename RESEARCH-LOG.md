@@ -102,10 +102,16 @@ stop opening the list. **This is now the spine of the design.**
 Follow-on from the same window logic: a row snapshotted fewer than 90 days before the data was cut
 cannot know its own outcome yet.
 
-**103 training rows are younger than 90 days. All 103 are labelled "did not convert."** Zero
+**101 training rows are younger than 90 days. All 101 are labelled "did not convert."** Zero
 conversions among them. They are structurally negative regardless of what really happened.
 
-It doesn't wreck the model — it's 8.6% of rows — but it matters for two reasons: it drags the base
+*(Boundary note, caught when I moved this from an ad-hoc query into `analysis/profile.py`: my first
+pass said 103 because I used `age <= 90`. There are exactly 2 rows sitting at 90 days, whose window
+has just closed and whose label is therefore legitimate. The script uses the strict `< 90` and
+reports **101**. Small, but it's the difference between a number I can defend and one I can't —
+and it's why the write-up quotes the script rather than my notes.)*
+
+It doesn't wreck the model — it's 8.4% of rows — but it matters for two reasons: it drags the base
 rate down slightly, and **anyone retraining this on a rolling window repeats it every cycle**, so
 the base rate sags and the scores drift with no error anywhere. That goes into the monitoring design
 as a hard assertion on any future retrain.
