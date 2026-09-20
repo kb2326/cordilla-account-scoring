@@ -11,6 +11,10 @@ python -m agent.run --as-of 2026-08-01
 
 Read `sample_run/` to see the output without installing anything.
 
+**Optional, both off by default** — `cp .env.example .env`:
+`ANTHROPIC_API_KEY` makes the call briefs live and unlocks `--investigate`;
+`LANGSMITH_TRACING` + `LANGSMITH_API_KEY` turn on tracing, which needs no code at all.
+
 ---
 
 ## The problem
@@ -188,9 +192,27 @@ Cost is measured rather than estimated: the committed run is `claude-haiku-4-5-2
 Accept-rate and lift print as **pending**, never estimated — that data does not exist for 14 weeks,
 and filling the gap with a guess is what cost the previous effort its credibility.
 
-**LangSmith** needs no code: set `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` and every node
-becomes a span. Verified, not assumed. It doesn't replace `decisions.csv` — the 90-day question is
-a join, not a trace — nor the gate, since our worst failure produces a perfectly clean trace.
+### Tracing
+
+**LangSmith needs no code** — LangGraph emits to it natively, so two environment variables are the
+whole integration. Verified on a live run rather than assumed:
+
+```
+chain  publish              15ms
+chain  verify_briefs         5ms
+llm    ChatAnthropic      2566ms | 687 tokens
+llm    ChatAnthropic      2134ms | 700 tokens     ... x16
+```
+
+It earns its place on the LLM layer: debugging a tool-choosing loop from a JSON file is miserable,
+and `--investigate` makes 50+ model calls a run. What it does **not** do is answer the question the
+business actually has. *"Did the accounts we queued in August beat the ones we held back?"* is a
+join between `decisions.csv` and the CRM ninety days later — no tracing tool stores that. And a
+trace cannot stop a bad batch: `monitoring/checks.py` runs **before** anything publishes, which is
+where the value is. Our worst failure produces a perfectly clean trace.
+
+Langfuse is the same two ideas with one extra dependency, and self-hostable — the right call if CRM
+records cannot leave the building.
 
 ---
 
@@ -215,6 +237,9 @@ python -m agent.run --as-of 2026-08-01                 # the agent
 python -m agent.run --as-of 2026-08-01 --investigate   # + the tool-using agent (needs a key)
 python -m monitoring.checks --as-of 2026-08-01         # checks alone; exit 0/1/2 = green/amber/red
 python -m monitoring.demo_silent_failure               # proof the checks catch silent failures
+
+# with tracing on - no code changes, just the environment
+LANGSMITH_TRACING=true LANGSMITH_API_KEY=... python -m agent.run --as-of 2026-08-01
 ```
 
 `--as-of` is required and never defaults to the system clock: both CSVs are snapshots taken on
