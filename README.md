@@ -44,6 +44,8 @@ None of this is a criticism of the model. It was given nine facts about each com
 not one of them, so it has no way to tell fresh information from a year-old file. Those questions were
 always going to be answered by the system around it.
 
+---
+
 ## What we did about it
 
 Five problems, five specific things built. This is the whole submission in one table.
@@ -118,15 +120,15 @@ Three layers, and the split is the whole design.
 
 ```mermaid
 flowchart LR
-        subgraph D["RULES · ~280 accounts"]
+    subgraph D["RULES · ~280 accounts"]
         direction TB
         D1["Check the data<br/>is usable"] --> D2["Ask the model<br/>for a score"] --> D3["Work out why<br/>it scored that"] --> D4["Apply the<br/>thresholds"]
     end
-        subgraph A["AGENT · ~20 borderline accounts"]
+    subgraph A["AGENT · ~20 borderline accounts"]
         direction TB
         A1["Model picks<br/>what to check next"] --> A2["Recommends<br/>an action"] --> A3["Rules can<br/>overrule it"]
     end
-        subgraph L["WRITING · queued accounts only"]
+    subgraph L["WRITING · queued accounts only"]
         direction TB
         L1["Model writes the words,<br/>leaving gaps for numbers"] --> L2["Code fills<br/>every number"] --> L3["Any invented number<br/>is rejected"]
     end
@@ -316,7 +318,7 @@ LANGSMITH_TRACING=true LANGSMITH_API_KEY=... python -m agent.run --as-of 2026-08
 | Structure, control flow, framework choice | The diagrams above · `agent/graph.py` |
 | **Monitoring**: what to watch, noise vs signal, response | `PROPOSAL.md` §3 · `monitoring/` |
 | One concrete, runnable piece of it | `monitoring/checks.py` + `demo_silent_failure.py` |
-| Written proposal, 800–1,200 words | `PROPOSAL.md` |
+| Written proposal | `PROPOSAL.md`, 1,296 words of prose plus two tables |
 | Research log, kept as the work happened | `RESEARCH-LOG.md` |
 
 ```
