@@ -85,6 +85,9 @@ Absolute cuts, not "top 50 of today", so a batch that suddenly overflows the tie
 
 ## Architecture
 
+**The distinction this design turns on:** a *workflow* runs a predetermined path; an *agent* decides
+its own next step. Most of this is a workflow, on purpose. One part is an agent, also on purpose.
+
 Three layers, and the split is the whole design.
 
 ```mermaid
@@ -157,6 +160,31 @@ flowchart TD
 Two cycles carry the weight. `quality_gate → halt` stops a bad batch before it reaches anyone;
 `verify_briefs → write_briefs` sends a brief back when the model writes a number it wasn't given.
 `publish` pauses for a human when the batch is amber.
+
+### Every node, and what happens when it fails
+
+Which steps involve a model, and what each does when something goes wrong. Error handling is
+assigned by *type* rather than uniformly — a retry helps a flaky network call and does nothing for
+a bad threshold.
+
+| Node | What it does | Model? | On failure |
+|---|---|---|---|
+| `load_batch` | Reads the CSV, refuses it if the schema is wrong, adds each account's age and data-gap flags | no | **Retry** once — a file read can fail transiently |
+| `quality_gate` | Compares the batch against what the training data looked like | no | **Routes to `halt`** on red. Publishing nothing is the correct outcome, not an error |
+| `score` | `predict_proba` on the exact nine-column contract | no | **Retry** once, then raise |
+| `explain` | Re-scores each account with one feature removed to find its drivers | no | **Raise** — a pure function failing means a real bug |
+| `triage` | Applies the thresholds, fills rep capacity, assigns the control group | no | **Raise** |
+| `investigate` *(optional)* | Tool-calling agent on ~20 borderline accounts | **yes** — chooses tools | **Skipped and recorded** when no key; capped at 12 turns; policy vetoes unsafe output |
+| `write_briefs` | Asks the model for 2–3 sentences per queued account | **yes** — writes prose only | **Retry** once — an API call is the one thing here that fails randomly |
+| `verify_briefs` | Rejects any number the model typed itself | no | **Loops back** to `write_briefs`, twice, then falls back to a deterministic template |
+| `publish` | Writes the outputs and the run record | no | **Pauses for a human** when the batch is amber — `interrupt()`, not a boolean |
+
+**What travels between nodes.** The run's state holds decisions, counts and health — things worth
+replaying. The batch itself travels beside it, because checkpointed state must be serialisable and a
+dataframe is not. In production that becomes a file path rather than a frame anywhere.
+
+**So: seven of nine nodes never touch a model.** The two that do are confined to language and to
+twenty ambiguous accounts, and both are checked afterwards by code that can overrule them.
 
 ---
 
