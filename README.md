@@ -1,16 +1,16 @@
 # Cordilla account triage
 
-**Every morning this decides three things: which accounts a rep should phone today, which ones need
-fresh data bought before anyone wastes a call on them, and which to leave alone. Then it writes down
-what it decided, what it cost, and whether today's data was trustworthy enough to act on at all.**
+**Every morning this decides three things: which accounts a rep should call today, which ones are
+worth refreshing before anyone calls them, and which to leave for now. It then records what it
+decided, what it cost, and whether the day's data was solid enough to act on.**
 
-A model that scores these accounts already existed and had sat unused for months, because a number in
-a spreadsheet does not tell anyone who to ring on Monday. This repo is the part in between, plus the
-checks that notice when it quietly stops being right.
+The scoring model it relies on already existed and does its job well. What it was never given is the
+layer that turns a score into somebody's morning: where the list should stop, whether the information
+behind a score is still current, and what a rep should actually say. That is what this repo adds.
 
-That last part is not decoration. Cordilla shipped a scoring system once before; it launched well and
-lost the room two quarters later, when the numbers drifted away from what reps were seeing and nobody
-was watching closely enough to catch it.
+It also adds the checks, and those matter here. Cordilla has shipped a scoring system before. It
+launched well, and two quarters later the numbers had drifted from what reps were seeing, with nothing
+obvious going wrong in the meantime. Most of what follows is about noticing that early.
 
 ```bash
 pip install -r requirements.txt
@@ -31,17 +31,18 @@ Read `sample_run/` to see the output without installing anything.
 Cordilla has tens of thousands of non-customer accounts and five reps. A rep makes ~40 calls a day
 and cold conversion is under 1%, so the only lever is **choosing better**.
 
-A model already scored those accounts and then sat unused, because a number in a file changes
-nobody's Tuesday. Three measured facts explain why it can't simply be switched on:
+A model already scores those accounts, and scores them usefully. Scoring is not the same as deciding,
+though, and three measured facts explain why it cannot simply be switched on as it stands:
 
 | What the data says | Why it matters |
 |---|---|
-| It is only trustworthy about its **top 10%**. Below that, its ordering is no better than shuffling | The list has to stop somewhere, and the model cannot say where. It never scores anything above 0.27, so the usual "act when it passes 0.5" rule would fire on nothing, ever |
+| Its ranking is reliable for the **top 10%**, and close to random below that | The list has to stop somewhere, and the model was never asked where. It also never scores above 0.27, so the usual "act when it passes 0.5" rule would fire on nothing at all |
 | **73% of accounts** carry information over 90 days old, and every feature counts a 90-day window | For **218 of 300 accounts the period being predicted has already closed** |
 | **39% have no buying-intent data**, and the step that prepares data for the model fills the gap with an average | "We know nothing about this company" silently becomes "normal interest", on the fact the model leans on most |
 
-None of that is the model's fault. It was given nine facts about each company and the date was not one
-of them, so it genuinely cannot tell fresh information from a year-old file.
+None of this is a criticism of the model. It was given nine facts about each company, and the date was
+not one of them, so it has no way to tell fresh information from a year-old file. Those questions were
+always going to be answered by the system around it.
 
 ## What we did about it
 
@@ -49,10 +50,10 @@ Five problems, five specific things built. This is the whole submission in one t
 
 | The problem | What we built |
 |---|---|
-| The model cannot say where the list should stop | A cut-off at the point its own evidence runs out, fixed in advance rather than "take the top 50 of whatever arrived today" |
-| It cannot see how old the information is | Every account's age is worked out before scoring, and anything describing a period that has already closed is routed away from a phone call |
+| Nothing decides where the list should stop | A cut-off at the point the model's own evidence runs out, fixed in advance rather than "take the top 50 of whatever arrived today" |
+| The model cannot see how old the information is | Every account's age is worked out before scoring, and anything describing a period that has already closed is routed away from a phone call |
 | It cannot tell "no data" from "average data" | We test whether the missing number would change the decision. If it would, we buy the data instead of guessing |
-| It cannot tell a rep why | A plain-English reason per account, worked out from the model itself, plus two or three sentences they can actually open a call with |
+| A score alone does not tell a rep why | A plain-English reason per account, worked out from the model itself, plus two or three sentences they can open a call with |
 | Nobody would notice it going wrong | Six checks comparing every batch against what normal looks like, with the authority to stop the run rather than publish a list nobody should trust |
 
 The last row is the one that matters most, and the rest of this README is mostly about it.
@@ -167,19 +168,15 @@ off by default and pointed only where the rules are genuinely arbitrary.
 `python -m agent.run --as-of 2026-08-01 --print-graph`
 
 ```mermaid
-flowchart TD
-    start(["start"]) --> load_batch
-    load_batch --> quality_gate
-    quality_gate -. "red" .-> halt
-    quality_gate -. "green / amber" .-> score
-    score --> explain --> triage
+flowchart LR
+    start(["start"]) --> load_batch --> quality_gate
+    quality_gate -. "red" .-> halt --> finish(["end"])
+    quality_gate -. "green / amber" .-> score --> explain --> triage
     triage -. "--investigate" .-> investigate --> write_briefs
     triage -. "default" .-> write_briefs
     write_briefs --> verify_briefs
     verify_briefs -. "invented a number" .-> write_briefs
-    verify_briefs -. "clean" .-> publish
-    halt --> finish(["end"])
-    publish --> finish
+    verify_briefs -. "clean" .-> publish --> finish
 ```
 
 Two cycles carry the weight. `quality_gate → halt` stops a bad batch before it reaches anyone;
