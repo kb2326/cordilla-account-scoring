@@ -154,6 +154,7 @@ so this is deliberate.
 python analysis/profile.py
 
 # 2. The agent: score the batch, decide, write the queue and the briefs
+#    Calls Claude if ANTHROPIC_API_KEY is set; uses the documented stand-in if not.
 python -m agent.run --accounts data/accounts_to_score.csv --as-of 2026-08-01
 
 # 3. The monitoring checks, standalone
@@ -182,16 +183,25 @@ python -m monitoring.demo_silent_failure
 The last two are the observability layer. **This repo produces the records; it does not build the
 dashboard** — that's the analyst's job, and they need clean data more than they need our charts.
 
-Every cost and volume figure is tagged **measured** or **assumed**. The language model is mocked
-(no API key is provided for this exercise), but the mock still builds the real prompt, counts the
-tokens and prices them against a documented rate table — so the cost figure is honest about what it
-is, and swapping in a live call changes the rates, not the plumbing.
+Every cost and volume figure is tagged **measured** or **assumed**.
 
-### Why not LangSmith or Langfuse?
+**The language model runs for real when `ANTHROPIC_API_KEY` is set**, and falls back to a
+documented stand-in when it is not — so the repo works for a reviewer without a key, and the run
+record says which path ran (`cost.mocked`, `cost.model`). The committed `sample_run/` is a live
+run: `claude-haiku-4-5-20251001`, 16 calls, 9,357 input and 1,857 output tokens, **$0.0186
+measured**, 0 briefs rejected by the verifier.
 
-Partly because they need an account, and the packet provides none — a repo whose
-observability only works with someone else's API key does not work for the person
-reviewing it. But mostly because they answer a different question.
+### On LangSmith and Langfuse
+
+**LangSmith works here with no code at all** — set `LANGSMITH_TRACING=true` and
+`LANGSMITH_API_KEY` and every node becomes a span with real token counts and latency, because
+LangGraph emits to it natively. Verified, not assumed: a traced run produces `write_briefs`,
+`verify_briefs` and `publish` spans alongside sixteen `ChatAnthropic` calls at ~2s and ~690
+tokens each.
+
+The local records exist alongside it rather than instead of it, for two reasons. One, a repo
+whose observability only works with someone else's API key does not work for the person
+reviewing it. Two, and more importantly, they answer a different question.
 
 A tracing backend answers *"what did the run do, and what did the model cost?"* The
 question this system has to answer in 90 days is *"which accounts did we queue on 12
@@ -204,7 +214,7 @@ They are complementary, not alternatives, and both plug in cleanly:
 
 | | How | Cost to add |
 |---|---|---|
-| **LangSmith** | `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY=...` | **No code at all.** `langsmith` already arrives with `langchain-core`, and LangGraph emits to it automatically — every node becomes a span with timings and token usage |
+| **LangSmith** | `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY=...` | **No code at all** — verified against a live run. `langsmith` already arrives with `langchain-core` |
 | **Langfuse** | `pip install langfuse`, then pass `CallbackHandler()` in the run config | Three lines, one dependency. The self-hostable option if account data cannot leave the building, which for Salesforce records is a real constraint |
 
 What neither replaces is the batch gate. A trace tells you what happened *after* it

@@ -77,9 +77,11 @@ of the gate this is ~150 lines of plain Python. **Scheduling is not LangGraph's 
 Airflow or a cron triggers the run; the graph is what happens inside it.
 
 **Where the LLM is allowed.** One node: the rep's brief. It gets a fact set, returns
-sentences containing `{{placeholders}}` and no digits, and code substitutes every
-value. A verifier rejects any number the model typed itself; failing twice drops to a
-template. No tools, no other accounts, no say in who gets called.
+sentences containing `{{placeholders}}` and no digits, and code substitutes every value. A
+verifier rejects any number the model typed itself; failing twice drops to a template. No tools,
+no other accounts, no say in who gets called. Live on `claude-haiku-4-5-20251001` — **16 calls,
+$0.0186, 0 rejections** in the committed run — with a documented stand-in when no key is present,
+so the repo runs for a reviewer either way.
 
 **Why not an autonomous agent?** The decisions worth automating — where to cut, what is
 too stale, who gets called — must be reproducible, explainable to a VP, and comparable
@@ -118,11 +120,10 @@ has a standard error of **7.3pp** — 20% to 30% is noise. Over four weeks it fa
 from 6.5% at 80% power needs **~208 per arm**, about **14 weeks**. Alerting weekly on
 conversion at a 6.5% base rate manufactures noise.
 
-**Tracing.** The 90-day question — which accounts we queued and whether they beat the
-holdout — is a join, not a trace, hence `decisions.csv` and `runs.jsonl`. LangSmith plugs
-in with two environment variables and no code; Langfuse with three lines, self-hostable if
-CRM data cannot leave the building. Neither replaces the gate: our worst failure produces a
-perfectly clean trace.
+**Tracing.** LangSmith is wired and verified — two environment variables, no code, every node
+a span. It does not replace `decisions.csv`: the 90-day question, whether the queued accounts beat
+the holdout, is a join rather than a trace. Nor does it replace the gate, since our worst failure
+produces a perfectly clean trace.
 
 **When it trips.** Red publishes nothing — a late queue costs a morning, a wrong one costs
 the programme. Amber pauses for a named owner; `monitoring/RUNBOOK.md` gives each alert an
@@ -137,8 +138,7 @@ the run summary prints lift as **pending**, never estimated.
 
 ## 4 · What I would not claim
 
-The 4.1x is in-sample. Reason codes use ablation, which ignores feature interactions. The
-LLM is mocked, so cost is assumed rates over measured tokens. Capacity and ACV are my
-assumptions. And **101 training rows younger than 90 days are all labelled "did not
+The 4.1x is in-sample. Reason codes use ablation, which ignores feature interactions. LLM cost
+is measured tokens at published rates. Capacity and ACV are my assumptions. And **101 training rows younger than 90 days are all labelled "did not
 convert"** because their window had not closed — harmless today, quietly corrosive if
 anyone retrains on a rolling window.

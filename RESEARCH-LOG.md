@@ -322,6 +322,56 @@ committing.
 
 ---
 
+---
+
+### 19:40 — Swapping the stand-in for a real model, and what that taught
+
+I had a key after all, so I ran the live path. The packet judges a documented mock the
+same as a live call, so this was not required — but a mock can hide an integration that
+would break, and "he never actually called a model" is a reasonable thing for a reviewer
+to wonder. Two things it taught that the stand-in could not.
+
+**The retry was mock-shaped.** On rejection the graph re-sent an identical prompt. Against
+a deterministic stand-in that is fine, because the second attempt is bound to fail the same
+way and drop to the template. Against a real model it is a wasted call: re-asking the same
+question gets the same answer. Fixed by feeding the verifier's violations back into the
+next prompt — `your_previous_attempt_was_rejected_because`. The mock had quietly hidden a
+design flaw, which is the honest cost of mocking.
+
+**Claude obeyed the hard rule and broke a soft one.** The instruction never to write a
+digit held on the first try, across all sixteen briefs, with zero verifier rejections. But
+it added markdown headings and a bold "Opening line:" label nobody asked for, into a file
+that already has its own formatting. Tightened the system prompt to forbid formatting.
+Worth noting the asymmetry: the rule with a machine check behind it was followed; the rule
+with only prose behind it drifted. That is an argument for the verifier existing, not
+against the model.
+
+**The output is better than my template, in a way I did not expect.** For ACC-00400 it
+wrote: *"has been contacted 4 times in the last ninety days but hasn't visited the website
+once, which suggests they may not be actively evaluating yet."* It reasoned about the
+*absence* of a signal. No template of mine does that, and it is exactly the kind of
+sentence that makes a rep trust the queue.
+
+**Measured, not assumed:** `claude-haiku-4-5-20251001`, 16 calls, 9,357 in / 1,857 out,
+**$0.0186 per run**, about $0.0012 per brief. At 200 briefs a day that is roughly $7 a
+month, which is not a number anyone needs to think about again.
+
+**And a performance finding that only appears once the calls are real.** The run went from
+78ms to 39.8 seconds, and the run record showed 39.6s of it in `write_briefs` — sixteen
+independent API calls waiting politely in line. A four-worker pool took it to 11.0s. I kept
+the pool small on purpose: polite to rate limits, and this is a nightly batch rather than a
+latency path. Worth saying that I only found this because the node timings were already
+being recorded — the observability paid for itself within an hour of existing.
+
+**LangSmith, verified rather than claimed.** The README said it needed two environment
+variables and no code. Tested: it does. Every node appears as a span, alongside sixteen
+`ChatAnthropic` calls at roughly 2 seconds and 690 tokens each. Kept alongside the local
+records rather than instead of them — the analyst's 90-day question ("did the queued
+accounts beat the holdout") is a join against CRM data, not something a trace can answer,
+and the gate has to run *before* publishing while a trace only exists afterwards.
+
+---
+
 ## Final entry — the raw material I would present from
 
 Not the presentation. The things I would stand behind in the room, and where each came from.
@@ -345,7 +395,7 @@ has already closed — so the value is triage, and the risk is trust.
 | Intent coverage | 38.7% missing, median-imputed at 25.3; converts 8.2% present vs 3.9% missing |
 | Censored labels | 101 training rows younger than 90 days, all labelled "did not convert" |
 | Drift today | every feature PSI below 0.06, score PSI 0.0061 — the baseline the alerts use |
-| This run | 300 scored, 16 queued, 7 to enrichment, 10 held back, 78ms, $0.0088 |
+| This run | 300 scored, 16 queued, 7 to enrichment, 10 held back, 11.0s, $0.0186 live |
 
 **Assumptions, which are mine and not Cordilla's data:** 5 SDRs × 40 dials × 20 days ≈
 1,000 accounts worked monthly; $15k ACV; about $1 per enriched record; about 8 minutes per
@@ -356,8 +406,9 @@ larger accounts. In this snapshot coverage is flat at 0.59–0.62 across every
 employee-count quartile, so I did not use the claim.
 
 **Three things I would say before being asked.** The 4.1x is in-sample and the out-of-bag
-trace argues it is optimistic. Ablation reason codes ignore feature interactions. The
-language model is mocked, so cost is assumed rates over measured tokens.
+trace argues it is optimistic. Ablation reason codes ignore feature interactions. The live
+model path is real and measured, but the stand-in is still what runs for anyone without a
+key, and the two produce different prose from identical facts.
 
 **If the panel changes the scenario:**
 
