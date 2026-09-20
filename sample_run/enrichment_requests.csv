@@ -1,0 +1,8 @@
+account_id,account_type,industry,score,snapshot_age_days,intent_imputed,why_refresh
+ACC-00205,Suspect,Retail,0.12890521444477065,419,False,scores in the top tier but its information is 419 days old; refresh before calling
+ACC-00958,Former Customer,Manufacturing,0.11189924570400157,409,True,scores in the top tier but its information is 409 days old; refresh before calling
+ACC-01415,Prospect,Professional Services,0.0978322737413732,437,True,scores in the top tier but its information is 437 days old; refresh before calling
+ACC-00570,Prospect,Manufacturing,0.09539632839806324,105,True,"no intent data for this account, and the value would decide whether it clears the bar; worth buying before anyone calls"
+ACC-01128,Suspect,Retail,0.09209820670381863,143,True,"no intent data for this account, and the value would decide whether it clears the bar; worth buying before anyone calls"
+ACC-00391,Former Customer,Retail,0.0893375356770386,150,True,"no intent data for this account, and the value would decide whether it clears the bar; worth buying before anyone calls"
+ACC-00690,Prospect,Retail,0.08355112935570029,75,True,"no intent data for this account, and the value would decide whether it clears the bar; worth buying before anyone calls"

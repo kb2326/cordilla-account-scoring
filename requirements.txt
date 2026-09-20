@@ -5,3 +5,7 @@ matplotlib==3.9.2
 
 # Optional — only needed if you prefer a notebook over plain scripts.
 # pip install -r requirements-notebook.txt
+
+# Added for the agent. The four pins above are Dialpad's and untouched;
+# langgraph brings langchain-core with it and touches nothing the model uses.
+langgraph==1.2.11

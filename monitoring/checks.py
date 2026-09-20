@@ -163,3 +163,55 @@ def merge(*healths: BatchHealth) -> BatchHealth:
     status = RED if any(c.status == RED for c in checks) else (
         AMBER if any(c.status == AMBER for c in checks) else GREEN)
     return BatchHealth(status=status, checks=checks)
+
+
+def _main(argv: list[str] | None = None) -> int:
+    """Run the checks against a batch without running the agent.
+
+        python -m monitoring.checks --accounts data/accounts_to_score.csv --as-of 2026-08-01
+
+    Exit code is the point: 0 green, 1 amber, 2 red. That makes this usable from
+    cron or a scheduler without anyone parsing output.
+    """
+    import argparse
+
+    import pandas as pd
+
+    from agent.contracts import add_quality_flags, validate_batch
+    from agent.scoring import load_model, score_batch
+
+    root = Path(__file__).resolve().parents[1]
+    parser = argparse.ArgumentParser(description="Check whether a batch is fit to act on.")
+    parser.add_argument("--accounts", type=Path, default=root / "data" / "accounts_to_score.csv")
+    parser.add_argument("--as-of", required=True)
+    args = parser.parse_args(argv)
+
+    baseline = load_baseline()
+    frame = pd.read_csv(args.accounts)
+    structural = validate_batch(frame)
+    if not structural.ok:
+        print(f"  STRUCTURAL FAILURE - not scoreable")
+        for error in structural.errors:
+            print(f"    - {error}")
+        return 2
+
+    frame = add_quality_flags(frame, pd.Timestamp(args.as_of))
+    health = run_input_checks(frame, baseline)
+    scores = pd.Series(score_batch(load_model(root / "model" / "model.pkl"), frame))
+    health = merge(health, run_score_checks(scores, baseline))
+
+    print(f"\n  batch: {args.accounts.name}  ({len(frame)} accounts, as of {args.as_of})")
+    print(f"  status: {health.status.upper()}\n")
+    for check in health.checks:
+        mark = {GREEN: "ok  ", AMBER: "warn", RED: "FAIL"}[check.status]
+        print(f"    [{mark}] {check.name:18s} {check.message}")
+        if check.status != GREEN:
+            print(f"           expected {check.expected}")
+    print()
+    return {GREEN: 0, AMBER: 1, RED: 2}[health.status]
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(_main())
