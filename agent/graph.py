@@ -46,6 +46,7 @@ from langgraph.types import RetryPolicy, interrupt
 from monitoring import checks as monitoring_checks
 
 from . import brief as brief_mod
+from . import investigator, llm
 from .contracts import add_quality_flags, validate_batch
 from .emit import new_run_record, write_outputs
 from .explain import baseline_from, explain_batch
@@ -62,9 +63,11 @@ class RunState(TypedDict, total=False):
     brief_attempt: int            # drives the write -> verify -> write cycle
     briefs_pending: list          # account_ids still without an accepted brief
     brief_violations: dict        # account_id -> why the last attempt was rejected
+    investigation: dict           # what the boundary-account agent did, if it ran
     written: dict
     halted: bool
     approved: bool
+    investigate_requested: bool
     events: Annotated[list, operator.add]   # append-only; every node adds one
 
 
@@ -81,6 +84,8 @@ class Deps:
     auto_approve: bool = False   # CLI sets this; a human answers otherwise
     max_brief_attempts: int = 2  # then the deterministic template takes over
     hallucinate: bool = False    # demo switch: make the stand-in type a number
+    investigate: bool = False    # send boundary accounts to the tool-using agent
+    investigate_limit: int = 20  # how many, at roughly a cent each
     # Run-scoped scratch space for the batch itself. Context is not checkpointed,
     # so this is the seam between "state worth replaying" and "data too big and
     # too un-serializable to belong in a checkpoint".
@@ -256,6 +261,72 @@ def _route_after_verify(state: RunState) -> str:
     return "write_briefs" if state.get("briefs_pending") else "publish"
 
 
+
+def investigate(state: RunState, runtime: Runtime[Deps]) -> dict:
+    """Send the genuinely ambiguous accounts to a tool-using agent.
+
+    Off by default (--investigate turns it on), and skipped without a live model,
+    because a loop whose whole point is choosing what to check next cannot be
+    faked by a deterministic stand-in. Skipping is recorded, not silent.
+    """
+    t0 = time.perf_counter()
+    d = runtime.context
+    frame = d.workspace["frame"]
+
+    if not investigator.available():
+        return {"investigation": {"ran": False, "reason": "no ANTHROPIC_API_KEY; needs a live model"},
+                "events": [_event("investigate", t0, skipped=True)]}
+
+    from langchain_anthropic import ChatAnthropic
+
+    model = ChatAnthropic(model=llm.LIVE_MODEL, max_tokens=700, temperature=0)
+    app = investigator.build_investigator(model)
+    candidates = investigator.select_boundary_accounts(frame, d.policy.call_threshold,
+                                                       limit=d.investigate_limit)
+
+    results, transcripts, calls = {}, [], 0
+    for row in candidates.itertuples(index=False):
+        ctx = investigator.account_context(row, frame, d.policy.call_threshold)
+        final = app.invoke(
+            {"messages": [("user", investigator.opening_message(ctx))], "account": ctx,
+             "checks_run": []},
+            # A hard ceiling on the loop. A model that cannot decide in this many
+            # turns is not going to, and an agent without a stop condition is an
+            # outage waiting for a quiet weekend.
+            {"recursion_limit": 12},
+        )
+        recommendation = final.get("recommendation") or {}
+        results[row.account_id] = recommendation
+        calls += sum(1 for m in final["messages"] if m.type == "ai")
+        transcripts.append({
+            "account_id": row.account_id,
+            "rule_based": row.action,
+            "tools_called": final.get("checks_run", []),
+            "recommended": recommendation.get("action"),
+            "rationale": recommendation.get("rationale"),
+        })
+
+    reviewed = investigator.apply_recommendations(frame, results, d.policy.call_threshold)
+    # The queue is built FROM actions, and we have just changed actions - so it has to
+    # be rebuilt, or the advice is cosmetic. Caught by checking the output rather than
+    # the code: six accounts the agent had sent for enrichment were still sitting in
+    # the rep's call list, correctly labelled and entirely wrong to be there.
+    d.workspace["frame"] = apply_capacity(reviewed, d.policy)
+    d.workspace["investigation"] = transcripts
+
+    changed = sum(1 for t in transcripts if t["recommended"] and t["recommended"] != t["rule_based"])
+    return {
+        "investigation": {
+            "ran": True, "accounts": len(transcripts), "llm_calls": calls,
+            "changed_from_rules": changed,
+            "vetoed": int(d.workspace["frame"].investigator_vetoed.notna().sum()),
+            "model": llm.LIVE_MODEL,
+        },
+        "counts": summarise(d.workspace["frame"]),
+        "events": [_event("investigate", t0, accounts=len(transcripts), changed=changed)],
+    }
+
+
 def publish(state: RunState, runtime: Runtime[Deps]) -> dict:
     """Write the outputs - but pause first if the batch looked unusual.
 
@@ -299,17 +370,24 @@ def publish(state: RunState, runtime: Runtime[Deps]) -> dict:
         counts=state["counts"],
         cost=state.get("cost", {"usd": 0.0, "llm_calls": 0}),
         batch_health=health,
+        investigation=state.get("investigation", {"ran": False, "reason": "not requested"}),
         node_ms={e["node"]: e["ms"] for e in state["events"]},
     )
     written = write_outputs(
         frame, record, d.output_dir,
         briefs_markdown=brief_mod.render_markdown(frame, d.workspace.get("briefs", {})),
+        investigation=d.workspace.get("investigation"),
     )
     return {
         "approved": True,
         "written": {k: str(v) for k, v in written.items()},
         "events": [_event("publish", t0, published=True)],
     }
+
+
+def _route_after_triage(state: RunState) -> str:
+    """Only worth the detour when it was asked for."""
+    return "investigate" if state.get("investigate_requested") else "write_briefs"
 
 
 def _route_after_gate(state: RunState) -> str:
@@ -328,6 +406,10 @@ def build_graph():
     g.add_node("score", score, retry_policy=RetryPolicy(max_attempts=2))
     g.add_node("explain", explain)
     g.add_node("triage", triage)
+    # Optional: a real agent loop for the ~20 accounts where the rules are
+    # arbitrary. Everything else stays deterministic, which is what makes the
+    # holdout comparison mean anything.
+    g.add_node("investigate", investigate)
     # The language model step, and the check on it. Two nodes rather than one
     # function with a loop inside, so the retry is a visible cycle in the graph
     # instead of control flow buried in a helper.
@@ -340,7 +422,9 @@ def build_graph():
     g.add_conditional_edges("quality_gate", _route_after_gate, {"halt": "halt", "score": "score"})
     g.add_edge("score", "explain")
     g.add_edge("explain", "triage")
-    g.add_edge("triage", "write_briefs")
+    g.add_conditional_edges("triage", _route_after_triage,
+                            {"investigate": "investigate", "write_briefs": "write_briefs"})
+    g.add_edge("investigate", "write_briefs")
     g.add_edge("write_briefs", "verify_briefs")
     g.add_conditional_edges("verify_briefs", _route_after_verify,
                             {"write_briefs": "write_briefs", "publish": "publish"})

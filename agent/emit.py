@@ -26,11 +26,15 @@ DECISION_COLUMNS = [
     "action", "reason", "queued", "queue_position", "in_holdout",
     "score", "rank", "snapshot_age_days", "intent_imputed", "never_contacted",
     "score_if_intent_low", "score_if_intent_high", "why",
+    # Present only when --investigate ran. The analyst needs to see which decisions a
+    # model touched, what it said, and whether policy overrode it.
+    "investigated", "investigator_action", "investigator_rationale", "investigator_vetoed",
 ]
 
 
 def write_outputs(df: pd.DataFrame, run_record: dict, output_dir: Path,
-                  briefs_markdown: str | None = None) -> dict[str, Path]:
+                  briefs_markdown: str | None = None,
+                  investigation: list[dict] | None = None) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
 
@@ -63,6 +67,10 @@ def write_outputs(df: pd.DataFrame, run_record: dict, output_dir: Path,
 
     if briefs_markdown:
         written["briefs"] = _text(briefs_markdown, output_dir / "briefs.md")
+
+    if investigation:
+        written["investigation"] = _text(_investigation_text(investigation),
+                                         output_dir / "investigation.md")
 
     written["summary"] = _text(_summary_text(df, run_record), output_dir / "run_summary.txt")
     return written
@@ -108,6 +116,32 @@ def _summary_text(df: pd.DataFrame, run: dict) -> str:
         f"  Run took {run['duration_ms']} ms and cost ${run['cost']['usd']:.4f}.",
     ]
     return "\n".join(lines) + "\n"
+
+
+def _investigation_text(transcripts: list[dict]) -> str:
+    """What the boundary-account agent looked at, and what it concluded.
+
+    Written out per account because "the agent decided" is not an audit trail. Which
+    tools it chose is as informative as the answer - an account it resolved in two
+    checks was never really ambiguous.
+    """
+    lines = ["# Boundary accounts: what the investigator did", "",
+             "These are the accounts where the rules were close to arbitrary. Each was given to a",
+             "tool-using agent that chose what to check and then recommended an action. The policy",
+             "keeps the final say; any override is recorded.", ""]
+    for t in transcripts:
+        changed = t["recommended"] and t["recommended"] != t["rule_based"]
+        lines += [
+            f"### {t['account_id']}",
+            "",
+            f"- rules said: **{t['rule_based']}**",
+            f"- agent recommended: **{t['recommended']}**" + ("  ← changed" if changed else ""),
+            f"- checks it chose to run: {', '.join(t['tools_called']) or 'none'}",
+            "",
+            f"> {t['rationale']}",
+            "",
+        ]
+    return chr(10).join(lines)
 
 
 def new_run_record(run_id: str, as_of: str, **parts) -> dict:

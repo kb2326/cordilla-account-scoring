@@ -33,6 +33,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--capacity", type=int, default=None, help="override how many accounts reps can take")
     p.add_argument("--yes", action="store_true",
                    help="approve publishing without asking, even if checks are amber")
+    p.add_argument("--investigate", action="store_true",
+                   help="send boundary accounts to the tool-using agent (needs ANTHROPIC_API_KEY)")
     p.add_argument("--print-graph", action="store_true", help="print the flow as mermaid and exit")
     args = p.parse_args(argv)
 
@@ -51,11 +53,14 @@ def main(argv: list[str] | None = None) -> int:
         accounts_path=args.accounts,
         output_dir=args.output_dir,
         auto_approve=args.yes,
+        investigate=args.investigate,
     )
     config = {"configurable": {"thread_id": new_run_id()}}
     run_id = config["configurable"]["thread_id"]
 
-    result = app.invoke({"run_id": run_id, "events": []}, config, context=deps, version="v2")
+    result = app.invoke({"run_id": run_id, "events": [],
+                     "investigate_requested": args.investigate},
+                    config, context=deps, version="v2")
 
     # An amber batch pauses here rather than publishing. In production this
     # payload goes to Slack and the resume is a button; at a terminal it is a
@@ -84,6 +89,14 @@ def main(argv: list[str] | None = None) -> int:
     for action, n in counts["by_action"].items():
         print(f"    {action:18s} {n:4d}")
     print(f"    {'queued to reps':18s} {counts['queued']:4d}   ({counts['held_out']} held back as control)")
+    inv = state.get("investigation") or {}
+    if inv.get("ran"):
+        print(f"\n  investigated {inv['accounts']} boundary accounts with {inv['model']}: "
+              f"{inv['llm_calls']} model turns, {inv['changed_from_rules']} decisions changed, "
+              f"{inv['vetoed']} overridden by policy")
+    elif args.investigate:
+        print(f"\n  investigation skipped: {inv.get('reason')}")
+
     print("\n  wrote:")
     for name, path in state["written"].items():
         print(f"    {name:20s} {_display(Path(path))}")
