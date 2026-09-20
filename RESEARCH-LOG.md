@@ -397,8 +397,8 @@ has already closed — so the value is triage, and the risk is trust.
 | Intent coverage | 38.7% missing, median-imputed at 25.3; converts 8.2% present vs 3.9% missing |
 | Censored labels | 101 training rows younger than 90 days, all labelled "did not convert" |
 | Drift today | every feature PSI below 0.06, score PSI 0.0061 — the baseline the alerts use |
-| Committed run (`--investigate`) | 300 scored, 9 queued, 20 to enrichment, 7 held back, 46.7s, **$0.1402** |
-| Split of that cost | 9 briefs $0.011 · 54 investigation turns **$0.129** — 92% of spend on 6.7% of accounts |
+| Committed run (`--investigate`) | 300 scored, 10 queued, 19 to enrichment, 7 held back, 46s, **$0.1376** |
+| Split of that cost | 10 briefs $0.012 · 52 investigation turns **$0.126** — 91% of spend on 6.7% of accounts |
 | Default run (no boundary agent) | 16 queued, 16 briefs, ~$0.019 |
 
 **Assumptions, which are mine and not Cordilla's data:** 5 SDRs × 40 dials × 20 days ≈

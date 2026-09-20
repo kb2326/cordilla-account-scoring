@@ -113,7 +113,7 @@ def _summary_text(df: pd.DataFrame, run: dict) -> str:
         f"  Worth knowing: {stale_share:.0%} of these accounts are working from information more",
         f"  than 3 months old. Those are flagged in the queue, not hidden.",
         "",
-        f"  Run took {run['duration_ms']} ms and cost ${run['cost']['usd']:.4f}.",
+        f"  Run took {_duration(run['duration_ms'])} and cost ${run['cost']['usd']:.2f}.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -142,6 +142,15 @@ def _investigation_text(transcripts: list[dict]) -> str:
             "",
         ]
     return chr(10).join(lines)
+
+
+def _duration(ms: float) -> str:
+    """Seconds for a human, milliseconds only when it really is that fast.
+
+    The run record keeps the raw number; this is the line a sales manager reads,
+    and '46701.2 ms' is engineer units leaking into somebody else's document.
+    """
+    return f"{ms/1000:.0f} seconds" if ms >= 1000 else f"{ms:.0f} ms"
 
 
 def new_run_record(run_id: str, as_of: str, **parts) -> dict:

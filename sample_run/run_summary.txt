@@ -1,8 +1,8 @@
-Account triage - 2026-08-01 (run 326d0ba8)
+Account triage - 2026-08-01 (run f50df0e7)
 
   300 accounts reviewed.
-  9 went to reps to call today.
-  20 need their data refreshed before anyone calls them.
+  10 went to reps to call today.
+  19 need their data refreshed before anyone calls them.
   55 went to marketing.
   7 good-looking accounts were deliberately held back, unworked, so we can
      measure in 90 days whether this is actually beating guesswork.
@@ -13,4 +13,4 @@ Account triage - 2026-08-01 (run 326d0ba8)
   Worth knowing: 73% of these accounts are working from information more
   than 3 months old. Those are flagged in the queue, not hidden.
 
-  Run took 46701.2 ms and cost $0.1402.
+  Run took 46 seconds and cost $0.14.

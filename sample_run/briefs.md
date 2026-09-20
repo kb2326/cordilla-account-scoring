@@ -8,48 +8,54 @@ This Former Customer in Financial Services with 22 people has visited your site 
 
 ### 2. ACC-00400 — Call Now
 
-This Suspect in Software with 109 people has been contacted 4 times in the last ninety days but hasn't visited the website at all, which suggests they may not be actively evaluating yet. The intent signal is borderline at 24.2, so this call is about understanding whether there's a real problem to solve or if we should move on. Ask them directly: "We've reached out a few times—what would need to change for this to be worth a conversation right now?"
+This Suspect in Software with 109 employees has been contacted 4 times in the past 86 days but hasn't visited the website yet. Their intent score sits at 24.2, which is right at baseline, so they may not be actively evaluating solutions right now. When you reach them, you could say: "I noticed your team hasn't explored our platform yet—I'm curious if there's a specific reason, or if now just isn't the right time to look at this?"
 
 *Why it surfaced: top tier and current (86 days old)*
 
 ### 3. ACC-00122 — Call Now
 
-Your team has already reached out 6 times over the past quarter, and this 698-person Manufacturing company ranks 7 on our list, but they haven't moved to a trial yet. The data is 38 days old, so treat it as a baseline rather than current activity. When you call, you might say: "Hi—I noticed we've connected with your team a few times already, and I wanted to check in directly about what's holding up a conversation with us."
+Your team has already reached out 6 times over the past 38 days, so they know who you are—but nothing's moved forward yet. This 698-person Manufacturing operation ranks 7 on our list, which tells us there's real potential here. When you call, try: "I noticed we've connected with your team a few times but haven't found the right fit yet—I'd like to understand what's actually blocking a conversation."
 
 *Why it surfaced: top tier and current (38 days old)*
 
 ### 4. ACC-00646 — Call With Caveat
 
-This data is 272 days old, so treat it as historical context rather than current activity. ACC-00646 is a 637-person Manufacturing company that's shown some engagement—6 sales contacts and 2 marketing leads in the last quarter—but no trial yet. When you reach them, you might say: "Hi, I noticed your team has talked with us a few times over the past few months—I wanted to check in and see if now's a good time to explore whether we're actually a fit for you."
+This data is 272 days old, so treat it as historical context rather than current activity. ACC-00646 is a 637-person Manufacturing company that's shown some engagement—6 sales touches and 2 marketing leads in the last quarter—but no trial yet. When you reach them, you might say: "Hi, I noticed your team has talked with us a few times over the past few months—I wanted to check in and see if now's a good time to explore whether we're actually a fit for you."
 
 *Why it surfaced: top tier; information is 272 days old, so treat the activity as historical*
 
 ### 5. ACC-00657 — Call With Caveat
 
-This data is 305 days old, so treat it as historical context rather than current activity. The account has shown modest engagement with 8 visits in the recent period and generated 4 marketing leads, but no sales conversations have happened yet. When you reach them, you might say: "Hi, I noticed your team has been looking at solutions in this space over the past few months—I wanted to see if there's a fit for a quick conversation."
+This data is 305 days old, so treat it as historical context rather than current activity. The account has shown 8 website visits and 4 marketing-qualified leads in the recent period, with an intent score of 24.2—just slightly below typical. When you call, you might open with: "Hi, I noticed your team has been exploring solutions in this space over the past few months—what's driving that interest right now?"
 
 *Why it surfaced: top tier; information is 305 days old, so treat the activity as historical*
 
 ### 6. ACC-00533 — Call Now
 
-This Prospect in Manufacturing with 65 employees has shown strong buying signals—an intent score of 63 and 7 website visits in the last 13 days—but hasn't spoken to sales yet. They're ranked 15 on your list, so this is a good time to reach out before someone else does. Try opening with: "I noticed your team has been looking at our site pretty regularly over the past few weeks—what's driving that interest right now?"
+This Prospect in Manufacturing with 65 employees has shown strong buying signals—an intent score of 63 and 7 website visits in the last 13 days—but no one from sales has reached out yet. They've generated 1 marketing lead, which means there's genuine interest to build on. Try opening with: "Hi, I noticed your team has been researching solutions on our site recently—what's driving that exploration right now?"
 
-*Why it surfaced: investigated: Strong, measured intent signal (63 vs. baseline 25) on fresh data (13 days old) places this account at the 95th percentile of prospects. The score is above threshold and the evidence is real, not inferred. Call to validate intent and capture the opportunity while the signal is hot.*
+*Why it surfaced: investigated: Measured intent score of 63 is genuine and ranks this 65-person manufacturer at the 95th percentile among prospects. Data is current (13 days old). The intent signal alone justifies a call; website activity is secondary.*
 
-### 7. ACC-00728 — Call With Caveat
+### 7. ACC-01155 — Call With Caveat
 
-This data is 73 days old, so treat it as historical context rather than current activity. They've visited your site 10 times in the last ninety days and have an intent score of 8.9, which is well above typical, but no one from your team has spoken to them yet. When you call, you might say: "Hi—I noticed your team has been checking out our site pretty regularly over the past few months, and I wanted to see if there's something specific you're evaluating right now."
+This Prospect in Retail with 85 people has shown modest buying signals—4 marketing-qualified leads in the last 30 days and an intent score of 23.5—but our team has already reached out 7 times, so tread lightly on repetition. The data is 30 days old, so confirm whether their situation has shifted before diving into a pitch. Try opening with: "I noticed your team's been exploring solutions in this space—what's changed since our last conversation?"
 
-*Why it surfaced: investigated: Measured intent (8.9) and 10 visits in 90 days place this account at the 92nd percentile of Prospects—a genuine outlier. However, the snapshot is 73 days old and we have no visibility into recent activity. Rep should call, but verify current engagement before investing heavily.*
+*Why it surfaced: investigated: Account scores at 93rd percentile among Prospects with measured intent of 23.5 and 7 prior touches—worth a call. However, the activity window is now 120 days stale; rep should verify current situation before investing heavily, as retail buying signals can shift in 30 days.*
 
-### 8. ACC-00832 — Call With Caveat
+### 8. ACC-00728 — Call With Caveat
 
-This data is 52 days old, so treat it as historical context rather than current activity. Your team has reached out 5 times in the last 52 days, but there's been 0 website engagement and their buying signals are running below typical levels at 14.6. When you call, you might open with: "I noticed we've connected a few times already—I wanted to check in and see if now's a better time to talk about what you're working on."
+This data is 73 days old, so treat it as historical context rather than current activity. They visited your site 10 times in the last ninety days and have an intent score of 8.9, which is well above typical, but no one from sales has reached out yet. When you call, you might say: "I noticed your team has been checking us out over the past few months—what's on your radar right now?"
 
-*Why it surfaced: investigated: Account ranks in the 90th percentile among peers and has recent sales contact history, but measured intent is 40% below typical and there are no website visits in 90 days. Rep should call, but expect lower conversion probability and confirm buying timeline before investing heavily.*
+*Why it surfaced: investigated: Strong measured intent (8.9) and website engagement place this at 92nd percentile among Prospects, but the snapshot is 73 days old. Rep should call, but verify current engagement before investing heavily—the buying signal is real, but we don't know if momentum has continued.*
 
-### 9. ACC-01102 — Call With Caveat
+### 9. ACC-00832 — Call With Caveat
 
-This data is 96 days old, so treat it as historical context rather than current activity. ACC-01102 in Professional Services with 29 people has visited your site 10 times recently and shows an intent score of 42.5, which is notably above typical. When you reach them, you might say: "I noticed your team has been looking at our site a few times over the past few months—what problem were you exploring a solution for?"
+This data is 52 days old, so treat it as historical context rather than current activity. Your team has reached out 5 times in the past 52 days, but there's been 0 website engagement and their buying signals are running below typical levels at 14.6. When you call, you might open with: "I noticed we've connected a few times already—I wanted to check in and see if now's a better time to talk about what you're working on."
 
-*Why it surfaced: investigated: Account ranks 88th percentile among Prospects with measured intent of 42.5 (68% above baseline). Snapshot is 96 days old; rep should verify current engagement status before dialing, but the intent signal and cohort standing justify the call attempt.*
+*Why it surfaced: investigated: Account ranks in the 90th percentile among Prospects and data is current, but the decision is marginal: intent is 40% below typical and there are zero website visits in 90 days. Rep should call, but treat this as a relationship-check rather than a hot lead, and be prepared for low engagement.*
+
+### 10. ACC-01496 — Call With Caveat
+
+This Former Customer in Retail has visited your site 13 times in the last ninety days and shows an intent score of 38.3, well above the typical Retail baseline. The data is 113 days old, so treat it as directional rather than current. Try opening with: "I noticed you've been researching solutions on our site recently—what's driving that interest right now?"
+
+*Why it surfaced: investigated: Former Customer with measured intent score 38 (above retail median) and 92nd-percentile score among peers—genuine re-engagement signal. However, snapshot is 113 days old and recent CRM activity is unknown. Rep should call, but verify current status and intent before investing heavily; account may have cooled or moved on.*

@@ -126,12 +126,13 @@ flowchart LR
 
 The model chooses **which** question to ask. It never supplies the facts — tools read from injected
 state — and it never has the last word: an expired account cannot reach a rep however persuasive
-the reasoning. On the committed run it investigated 20 accounts in 54 turns and changed 17
-decisions, **most of them more cautious than the rules** — moving accounts from "call with a
-caveat" to "refresh the data first".
+the reasoning. On the committed run it investigated 20 accounts in 52 turns and changed 16 decisions,
+**most of them more cautious than the rules** — moving accounts from "call with a caveat" to "refresh
+the data first". It is not fully deterministic: re-running shifts a decision or two either way, which is
+exactly why it is confined to the ~20 accounts where the rule was arbitrary anyway.
 
-It is also **92% of the model spend for 6.7% of the accounts** ($0.129 of $0.140), which is why it
-is off by default and pointed only where the rules are genuinely arbitrary.
+It is also **91% of the model spend for 6.7% of the accounts** ($0.126 of $0.138), which is why it is
+off by default and pointed only where the rules are genuinely arbitrary.
 
 ### The graph, generated from the code
 
@@ -191,10 +192,10 @@ One bad week means nothing at 30 accounts a week; the arithmetic is in `PROPOSAL
 | `run_summary.txt` | sales manager | Five lines, no jargon |
 
 Cost is measured rather than estimated, and includes every model call. The committed run
-(`--investigate`, live) is `claude-haiku-4-5-20251001`, **63 calls, $0.1402** — 9 briefs at $0.011
-and 54 investigation turns at $0.129 — with tokens taken from the API responses. The default run,
-without the boundary agent, is 16 briefs for about **$0.019**. Every figure is tagged **measured**
-or **assumed**.
+(`--investigate`, live) is `claude-haiku-4-5-20251001`, **62 calls, $0.1376** — 10 briefs at $0.012 and
+52 investigation turns at $0.126 — with tokens taken from the API responses. The default run, without
+the boundary agent, is 16 briefs for about **$0.019**. Every figure is tagged **measured** or
+**assumed**.
 
 Accept-rate and lift print as **pending**, never estimated — that data does not exist for 14 weeks,
 and filling the gap with a guess is what cost the previous effort its credibility.

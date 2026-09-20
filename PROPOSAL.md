@@ -90,8 +90,8 @@ stand-in when no key is present.
 reproducible, explainable to a VP, and comparable against a control group. An LLM choosing them is
 none of those. The exception is the ~20 accounts where the rule is arbitrary: they get a real
 tool-calling loop (`--investigate`) that decides what to check and recommends, policy keeping veto.
-It changed 17 decisions, mostly toward caution, and cost **$0.129 of the run's $0.140** — the
-argument for aiming it narrowly rather than at all 300.
+It changed 16 decisions, mostly toward caution, and cost **$0.126 of the run's $0.138** — the argument
+for aiming it narrowly rather than at all 300.
 
 **Deployment.** Nightly against Salesforce, artifacts pinned by hash, run records to a
 warehouse, rollback on one flag. **Two weeks in shadow mode first**: score, record, publish
@@ -113,7 +113,7 @@ real batch three ways and runs the real agent against each:
 Zero exceptions in all three. The second is the point: ageing every snapshot by 200
 days leaves the mean score **exactly** where it was.
 
-**Three clocks.** *Daily:* intent coverage (38.7% baseline, ±5pp amber, ±10pp red), staleness
+**Three clocks.** *Daily:* intent coverage (40.2% training baseline, 38.7% today, ±5pp amber, ±10pp red), staleness
 (median 121 days), batch size, score distribution — needing no labels, the only signals that catch
 anything this week. *Four-weekly:* rep dispositions. *Quarterly:* conversion versus control.
 
