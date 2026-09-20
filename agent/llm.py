@@ -1,10 +1,13 @@
 """The language model seam, and the mock that stands in for it.
 
-No API key is provided for this exercise, so `complete()` returns a deterministic
-stand-in. Everything around the call is real: the prompt is built exactly as it
-would be sent, tokens are counted, cost is priced, and the result goes through the
-same verifier a live response would. Swapping in a real model is the body of
-`_complete_live()` and one environment variable.
+`complete()` calls Anthropic when ANTHROPIC_API_KEY is set and falls back to a
+deterministic stand-in when it is not. Both paths go through the same prompt, the
+same verifier and the same cost accounting, so the repo runs for a reviewer with no
+key and still exercises the real integration for anyone who has one.
+
+Which path ran is recorded in every run: `cost.mocked` and `cost.model` in
+runs.jsonl. sample_run/ holds output from a live call so the difference is visible
+without needing a key.
 
 WHERE A REAL CALL PLUGS IN
 --------------------------
@@ -38,16 +41,22 @@ MODEL_NAME = "mock-small-v1"
 PRICE_INPUT_PER_M = 0.80
 PRICE_OUTPUT_PER_M = 4.00
 
-SYSTEM_PROMPT = """You write one short call brief for a B2B sales rep.
+SYSTEM_PROMPT = """You write one short call brief for a B2B sales development rep who
+is about to phone this account.
 
-Rules:
-- 2 to 3 sentences. Plain English. No sales jargon, no adjectives like "exciting".
-- You may ONLY refer to numbers using the {{placeholders}} provided. Never write a
-  digit yourself. If you want to mention the number of website visits, write
-  {{web_touchpoints_90d}}.
-- If the account's information is old, say so plainly in the brief.
-- End with a specific opening line the rep could actually use.
-"""
+Hard rules:
+- 2 to 3 sentences, plain English, no sales jargon, no adjectives like "exciting".
+- NEVER write a digit. Not one. Every number must be a {{placeholder}} taken from
+  placeholders_available. To mention website visits, write {{web_touchpoints_90d}},
+  never the number itself. A brief containing a digit is rejected automatically.
+- Do not invent facts. Use only what is in facts_you_may_reference.
+- If snapshot_age_days is large, say plainly that the information is old and should
+  be treated as historical rather than current.
+- Finish with one specific opening line the rep could say out loud.
+- Plain prose only. No headings, no bold, no bullet points, no labels like
+  "Opening line:". This goes into a list that already has its own formatting.
+
+You are writing for someone who will read this aloud thirty seconds from now."""
 
 
 @dataclass
@@ -79,33 +88,44 @@ def complete(user_prompt: str, *, hallucinate: bool = False) -> Completion:
 
     `hallucinate` exists for the demo in monitoring/: it makes the stand-in type a
     number directly, which is what the verifier is there to catch. It is never set
-    by a normal run.
+    by a normal run, and it forces the mock even when a key is present so the demo
+    is deterministic and free.
     """
-    if os.getenv("ANTHROPIC_API_KEY"):
+    if os.getenv("ANTHROPIC_API_KEY") and not hallucinate:
         return _complete_live(user_prompt)
     return _complete_mock(user_prompt, hallucinate=hallucinate)
 
 
-def _complete_live(user_prompt: str) -> Completion:  # pragma: no cover - no key in this exercise
-    """The real call. Untested here because no key is provided; kept honest and small.
+LIVE_MODEL = "claude-haiku-4-5-20251001"
+# Published rates for that model, USD per million tokens. Still an assumption in the
+# sense that they are read off a price list rather than an invoice, but the token
+# counts on this path come from the API response, not an estimate.
+LIVE_PRICE_INPUT_PER_M = 1.00
+LIVE_PRICE_OUTPUT_PER_M = 5.00
 
-        pip install langchain-anthropic
+
+def _complete_live(user_prompt: str) -> Completion:
+    """The real call. Small model, zero temperature, tight token budget.
+
+    A cheap model is the right choice here and the reason is design, not economy:
+    the task is writing two sentences over facts that have already been decided.
+    Every number is supplied, every decision is made. There is nothing to reason
+    about, so paying for reasoning would be paying for variance.
     """
-    from langchain_anthropic import ChatAnthropic  # imported lazily so the repo runs without it
+    from langchain_anthropic import ChatAnthropic  # lazy: the repo runs without it
 
-    model = ChatAnthropic(model="claude-haiku-4-5-20251001", max_tokens=300, temperature=0)
+    model = ChatAnthropic(model=LIVE_MODEL, max_tokens=300, temperature=0)
     response = model.invoke([("system", SYSTEM_PROMPT), ("human", user_prompt)])
-    usage = getattr(response, "usage_metadata", {}) or {}
-    prompt_tokens = usage.get("input_tokens", estimate_tokens(SYSTEM_PROMPT + user_prompt))
-    completion_tokens = usage.get("output_tokens", estimate_tokens(response.text()))
-    return Completion(
-        text=response.text(),
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        usd=price(prompt_tokens, completion_tokens),
-        model=model.model,
-        mocked=False,
-    )
+
+    usage = getattr(response, "usage_metadata", None) or {}
+    prompt_tokens = int(usage.get("input_tokens") or estimate_tokens(SYSTEM_PROMPT + user_prompt))
+    completion_tokens = int(usage.get("output_tokens") or estimate_tokens(str(response.content)))
+    usd = round(prompt_tokens / 1e6 * LIVE_PRICE_INPUT_PER_M
+                + completion_tokens / 1e6 * LIVE_PRICE_OUTPUT_PER_M, 6)
+    text = response.content if isinstance(response.content, str) else response.text()
+    return Completion(text=text.strip(), prompt_tokens=prompt_tokens,
+                      completion_tokens=completion_tokens, usd=usd,
+                      model=LIVE_MODEL, mocked=False)
 
 
 # --------------------------------------------------------------------------- mock

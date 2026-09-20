@@ -41,7 +41,7 @@ class Brief:
     completion_tokens: int = 0
 
 
-def build_prompt(row) -> str:
+def build_prompt(row, corrections: list[str] | None = None) -> str:
     """Everything the model is allowed to know, as JSON.
 
     It sees facts and pre-computed evidence phrases, never the raw frame, and
@@ -54,6 +54,11 @@ def build_prompt(row) -> str:
         "facts_you_may_reference": facts,
         "placeholders_available": sorted(facts.keys()),
     }
+    if corrections:
+        # A retry that re-asks the identical question only works against a
+        # deterministic stand-in. A real model needs to be told what was wrong with
+        # its last attempt, or the second call fails exactly like the first.
+        payload["your_previous_attempt_was_rejected_because"] = corrections
     return json.dumps(payload, indent=1)
 
 
@@ -96,14 +101,14 @@ def fallback_text(row) -> str:
             f"Record is {currency}.")
 
 
-def generate(row, hallucinate: bool = False):
+def generate(row, hallucinate: bool = False, corrections: list[str] | None = None):
     """One attempt. The graph owns the retry, not this function.
 
     Deliberate: a retry loop buried in a helper is invisible in the flow diagram
     and untestable on its own. As a graph cycle it shows up in the picture, the
     attempt count lands in the run record, and the node can be invoked alone.
     """
-    return llm.complete(build_prompt(row), hallucinate=hallucinate)
+    return llm.complete(build_prompt(row, corrections), hallucinate=hallucinate)
 
 
 def accept(row, text: str) -> tuple[str | None, list[str]]:

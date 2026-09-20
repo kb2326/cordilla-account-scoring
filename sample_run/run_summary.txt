@@ -1,4 +1,4 @@
-Account triage - 2026-08-01 (run d4d9ab11)
+Account triage - 2026-08-01 (run 231f3aa8)
 
   300 accounts reviewed.
   16 went to reps to call today.
@@ -13,4 +13,4 @@ Account triage - 2026-08-01 (run d4d9ab11)
   Worth knowing: 73% of these accounts are working from information more
   than 3 months old. Those are flagged in the queue, not hidden.
 
-  Run took 77.6 ms and cost $0.0088.
+  Run took 11304.8 ms and cost $0.0186.

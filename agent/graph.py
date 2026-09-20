@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import operator
 import time
+from concurrent.futures import ThreadPoolExecutor
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,6 +61,7 @@ class RunState(TypedDict, total=False):
     cost: dict
     brief_attempt: int            # drives the write -> verify -> write cycle
     briefs_pending: list          # account_ids still without an accepted brief
+    brief_violations: dict        # account_id -> why the last attempt was rejected
     written: dict
     halted: bool
     approved: bool
@@ -172,16 +174,25 @@ def write_briefs(state: RunState, runtime: Runtime[Deps]) -> dict:
     cost = dict(state.get("cost") or {"llm_calls": 0, "prompt_tokens": 0,
                                       "completion_tokens": 0, "usd": 0.0})
 
-    for account_id in pending:
+    violations = state.get("brief_violations") or {}
+    # Sequentially this node was 39.6s of a 39.8s run - 16 independent API calls
+    # waiting on each other for no reason. They share nothing, so a small pool
+    # turns it into ~4s. Deliberately small: four concurrent calls is polite to
+    # rate limits, and this is a nightly batch, not a latency-critical path.
+    def draft_one(account_id: str):
         row = frame[frame.account_id == account_id].iloc[0]
-        completion = brief_mod.generate(row, hallucinate=d.hallucinate)
-        drafts[account_id] = completion.text
-        cost["llm_calls"] += 1
-        cost["prompt_tokens"] += completion.prompt_tokens
-        cost["completion_tokens"] += completion.completion_tokens
-        cost["usd"] = round(cost["usd"] + completion.usd, 6)
-        cost["model"] = completion.model
-        cost["mocked"] = completion.mocked
+        return account_id, brief_mod.generate(row, hallucinate=d.hallucinate,
+                                              corrections=violations.get(account_id))
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for account_id, completion in pool.map(draft_one, pending):
+            drafts[account_id] = completion.text
+            cost["llm_calls"] += 1
+            cost["prompt_tokens"] += completion.prompt_tokens
+            cost["completion_tokens"] += completion.completion_tokens
+            cost["usd"] = round(cost["usd"] + completion.usd, 6)
+            cost["model"] = completion.model
+            cost["mocked"] = completion.mocked
 
     cost["pricing"] = "ASSUMED rates in agent/llm.py; token counts measured on the real prompt"
     attempt = state.get("brief_attempt", 0) + 1
@@ -234,6 +245,7 @@ def verify_briefs(state: RunState, runtime: Runtime[Deps]) -> dict:
     cost["briefs_written"] = len(briefs)
     return {
         "briefs_pending": still_failing,
+        "brief_violations": {a: v for a, v in rejected},
         "cost": cost,
         "events": [_event("verify_briefs", t0, rejected=len(rejected), accepted=len(briefs))],
     }

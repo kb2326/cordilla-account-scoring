@@ -9,3 +9,8 @@ matplotlib==3.9.2
 # Added for the agent. The four pins above are Dialpad's and untouched;
 # langgraph brings langchain-core with it and touches nothing the model uses.
 langgraph==1.2.11
+
+# Only needed for the live language-model path. Without it - or without
+# ANTHROPIC_API_KEY - agent/llm.py falls back to the documented stand-in and
+# the repo runs exactly the same.
+langchain-anthropic==1.7.2
