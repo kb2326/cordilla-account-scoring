@@ -1,40 +1,199 @@
-# Cordilla Systems, AI Engineer Exercise — Impact Framing, Agent Build, Monitoring
+# Cordilla account triage
+
+**A nightly agent that decides which accounts a rep should call tomorrow, which ones need fresh
+data before anyone calls them, and which ones to leave alone — and records what it decided, how
+long it took and what it cost.**
+
+The scoring model already existed and sat unused. This repo is everything between "here is a
+number" and "Priya knows who to call at 8:30 AM."
+
+---
+
+## The problem in 30 seconds
+
+Cordilla has tens of thousands of non-customer accounts and a handful of reps. A rep can make
+~40 calls a day, and cold conversion is **under 1%**. The only real lever is choosing better.
+
+A model already exists that scores an account's chance of converting within 90 days. It works
+reasonably well — but on its own it can't run a sales team, for three reasons we measured in
+`analysis/`:
+
+| What we found | Why it matters |
+|---|---|
+| **Its signal lives in the top 10% only.** Below that, the ordering is no better than chance | A ranked list of 300 is mostly noise. The list has to stop somewhere, and that cut is a decision the model can't make |
+| **73% of the batch is working from information over 90 days old.** Its highest-scoring account was last updated in October 2025 | Every activity column counts a 90-day window. Past 90 days, the window it describes has already closed |
+| **39% of accounts have no buying-intent data**, and the model's preprocessing fills the gap with an average | "We know nothing" silently becomes "normal interest" — on the model's single heaviest feature |
+
+None of those are the model's fault. The date on the data was never one of its inputs.
+
+---
+
+## How it works
+
+```mermaid
+flowchart TD
+    IN["Today's accounts"] --> CHK{"Is this batch<br/>trustworthy?"}
+    CHK -->|"no"| HALT["Stop.<br/>Publish nothing.<br/>Alert a human."]
+    CHK -->|"yes"| SCORE["Score every account<br/>using the existing model"]
+    SCORE --> WHY["Explain each score<br/>using that account's own facts"]
+    WHY --> ROUTE{"What should happen<br/>to this account?"}
+    ROUTE --> CALL["Rep calls today"]
+    ROUTE --> FRESH["Buy fresh data first"]
+    ROUTE --> NURT["Marketing nurture"]
+    ROUTE --> HOLD["Leave alone,<br/>reason recorded"]
+    CALL --> BRIEF["Write a 3-line brief.<br/>Words from a language model,<br/>every number filled by code"]
+    BRIEF --> PUB["Publish into the rep's<br/>normal task list"]
+    PUB --> REC["Record every decision,<br/>timing and cost"]
+    HALT --> REC
+```
+
+The rep never opens a dashboard or learns a new tool. The work appears where their work already is.
+
+---
+
+## What happens to a single account
+
+```mermaid
+flowchart TD
+    A["One account"] --> B{"Score in the top 10%<br/>of what this model<br/>has ever produced?"}
+    B -->|"no — but top 30%"| N["NURTURE<br/>marketing campaign"]
+    B -->|"no"| H["HOLD<br/>reason recorded, not dropped"]
+    B -->|"yes"| C{"How old is<br/>the information?"}
+    C -->|"over a year"| F["REFRESH FIRST<br/>send to the data vendor"]
+    C -->|"3 to 12 months"| E["CALL WITH CAVEAT<br/>brief states the data's age"]
+    C -->|"under 90 days"| D{"Was buying intent<br/>actually measured?"}
+    D -->|"no, it was filled in"| F
+    D -->|"yes"| G["CALL TODAY"]
+```
+
+Every threshold here is anchored to something measured, not chosen by taste:
+
+| Rule | Value | Where it comes from |
+|---|---|---|
+| "Top 10%" | score ≥ **0.1088** | The 90th percentile of the model's scores on its own training data. Above it, conversion runs at 26.7% against a 6.5% base. Below it, ordering is noise |
+| "Information too old" | **90 days** | Every feature counts a 90-day window. Past that, the window no longer overlaps the period we're predicting |
+| "Expired" | **365 days** | Beyond a year, a call references events that are over a year stale |
+
+An absolute cut, not "top 50 of today's batch" — so batches stay comparable, and a sudden overflow
+is itself a warning sign.
+
+---
+
+## What the model sees, and what the agent adds
+
+```mermaid
+flowchart LR
+    M["THE MODEL<br/>reads 9 facts about a company<br/>and returns one number"] --> A["THE AGENT"]
+    K["THE AGENT ALSO KNOWS<br/>how old the information is<br/>whether intent was measured or guessed<br/>how many calls a rep can make today<br/>who was already called last week"] --> A
+    A --> O["Today's queue,<br/>with a reason on every line"]
+```
+
+---
+
+## How we'd know it stopped working
+
+These systems rarely break loudly. The list keeps arriving, looks normal, and is slowly wrong.
+Three checks, on three different clocks:
+
+```mermaid
+flowchart LR
+    R["Every morning's run"] --> D1["NEXT MORNING<br/>Is data still arriving?<br/>Is it going stale?"]
+    R --> D2["WITHIN A MONTH<br/>Are reps starting to<br/>disagree with the list?"]
+    R --> D3["NEXT QUARTER<br/>Did queued accounts convert<br/>more than the held-back group?"]
+```
+
+One bad week means nothing: with ~30 accounts in a weekly queue, the numbers bounce far too much to
+read. Alerts fire on a four-week pattern instead. The arithmetic behind that is in `PROPOSAL.md`.
+
+A small share of good-looking accounts is **deliberately held back** from the queue every run. It
+costs a few calls. It's the only way anyone can ever prove this worked rather than claim it.
+
+---
 
 ## Setup
 
-    python -m venv .venv
-    source .venv/bin/activate        # Windows: .venv\Scripts\activate
-    pip install -r requirements.txt
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-Tested against Python 3.11+ with the exact pinned versions above. If you'd rather work in a notebook than plain scripts (either is fine, see the take-home packet), `pip install -r requirements-notebook.txt` instead (adds Jupyter on top of the same pinned core).
+Python 3.11+. Dependencies are pinned to the versions the model was saved with
+(`scikit-learn==1.5.2`); loading a pickle under a different version is a silent-corruption risk,
+so this is deliberate.
 
-Loading the model (already trained, don't retrain it):
+## Run it
 
-    import pickle
-    with open("model/model.pkl", "rb") as f:
-        model = pickle.load(f)
-    # model.predict_proba(df[feature_columns]), feature columns are listed below and in the take-home packet
+```bash
+# 1. Regenerate every number quoted in PROPOSAL.md and this README
+python analysis/profile.py
 
-Expected feature columns, in the order the model was trained on: `account_type`, `employee_count`, `industry`, `intent_score`, `mql_count_90d`, `trial_started`, `trial_active_users`, `web_touchpoints_90d`, `sales_contacts_90d`. `snapshot_date` and `account_id` are identifiers, not model inputs.
+# 2. The agent: score the batch, decide, write the queue and the briefs
+python -m agent.run --accounts data/accounts_to_score.csv --as-of 2026-08-01
 
-**Treat 2026-08-01 as "today" for this exercise.** Both CSVs are static snapshots generated as of that date. Any recency/age calculation (e.g. "how old is this account's snapshot") should use 2026-08-01 as the reference point, not your actual system clock.
+# 3. The monitoring checks, standalone
+python -m monitoring.checks --accounts data/accounts_to_score.csv --as-of 2026-08-01
 
-## What's here
+# 4. Prove the monitoring catches a silent failure
+python -m monitoring.demo_silent_failure
+```
 
-- `model/model.pkl`, a real, already-trained scikit-learn pipeline. Don't retrain it. You don't need to audit it to research rigor, this exercise isn't scored on that, but it's real data worth actually looking at if it changes your impact framing or monitoring design.
-- `data/training_data.csv`, the labeled historical data the model above was actually trained on. Look at it enough to ground your impact-framing numbers and your monitoring design, that's the bar, not a full audit.
-- `data/accounts_to_score.csv`, an unlabeled batch you'll run the model against as part of the agent build. Don't modify or regenerate either CSV; everyone works from the same files.
-- `agent/`, your agent: load the model, score `accounts_to_score.csv`, and build something real that does something with the output. Vague on purpose, see the take-home packet's hints on what we'd minimally want to see (tools/actions, structure, framework choice and why, deployment). Mock any LLM/API calls, no key is provided, see the packet.
-- `monitoring/`, at least one real, concrete monitoring check (a health check, a data-quality assertion, a drift signal, an alert condition). Can live here or be folded into `agent/`, your call. See the packet, this is scored as its own dimension, not a bullet point.
-- `PROPOSAL.md`, your written design proposal covering all three: impact framing, agent design, monitoring design (see the take-home packet for the required sections).
-- `RESEARCH-LOG.md`, your running log as you work: hypotheses, what you tried, dead ends, and specifically what you asked your AI tool and how you used what came back.
+`--as-of` is required and never defaults to the system clock: both CSVs are snapshots taken on
+2026-08-01, and every age in this repo is measured from that date.
 
-## Working process
+---
 
-Commit as you actually go, small, real commits over time, not one commit at the end. We read the commit history as part of how you reason and work, not just the final diff.
+## What it produces
 
-**We'd genuinely like you to use AI here, assisted coding tools especially (Claude Code, Codex, Cursor, Antigravity, or similar), on your own accounts.** Dialpad doesn't provide one for this exercise. Disclose your actual sessions/prompts in `RESEARCH-LOG.md`, specific enough that we can see what shaped a decision, not a vague "used AI throughout."
+| File | For whom | What it is |
+|---|---|---|
+| `outputs/call_queue.csv` | SDR | The accounts to call, best first, with reasons |
+| `outputs/briefs.md` | SDR | Three lines per queued account |
+| `outputs/enrichment_requests.csv` | RevOps | Accounts worth refreshing before anyone calls |
+| `outputs/run_summary.txt` | Sales manager | Plain English, no jargon |
+| `outputs/runs.jsonl` | AI transformation analyst | One line per run: counts, timings, cost, alerts |
+| `outputs/decisions.csv` | AI transformation analyst | One row per account per run — joins to CRM outcomes later |
+| `outputs/events.jsonl` | Engineer | Node-level trace for debugging |
 
-## When you're done
+The last three are the observability layer. **This repo produces the records; it does not build the
+dashboard** — that's the analyst's job, and they need clean data more than they need our charts.
 
-Push this to a public git repo and send us the link. That's the submission. The presentation gets scheduled as a separate follow-up after that, not something to prepare beforehand.
+Every cost and volume figure is tagged **measured** or **assumed**. The language model is mocked
+(no API key is provided for this exercise), but the mock still builds the real prompt, counts the
+tokens and prices them against a documented rate table — so the cost figure is honest about what it
+is, and swapping in a live call changes the rates, not the plumbing.
+
+---
+
+## Where the numbers come from
+
+Every figure in `PROPOSAL.md` and in this README is regenerated by `analysis/profile.py` into
+`analysis/findings.json`. If a number isn't in that file, it isn't in the write-up.
+
+---
+
+## Repo map
+
+```
+analysis/     profile.py        measures the data and the model; writes findings.json
+agent/        run.py            entry point
+              graph.py          the flow above, as a LangGraph state machine
+              policy.py         the thresholds, and why each one is what it is
+              explain.py        why an account scored what it did
+              llm.py            the mocked language model, with the real plug-in point
+monitoring/   checks.py         the checks, with baselines measured from the training data
+              baseline.json     what "normal" looked like on 2026-08-01
+              demo_silent_failure.py
+model/        model.pkl         provided, not retrained
+data/         *.csv             provided, not modified
+PROPOSAL.md                     impact, agent design, monitoring design
+RESEARCH-LOG.md                 what was tried, what failed, what the AI got wrong
+```
+
+## What this is not
+
+- Not a retrained or tuned model. The pickle is used exactly as provided.
+- Not a lookup tool. Nobody types in an account number; the system pushes work out.
+- Not an autonomous emailer. It queues work for humans and stops before anything leaves the building.
+- Not a production service. No test suite, no packaging, no CI — the exercise asks for a working
+  prototype, and that's what this is.
