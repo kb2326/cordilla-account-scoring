@@ -15,11 +15,10 @@ trust — and the previous scoring effort spent the second to buy the first.
 Today that is guesswork. After this the queue is chosen, ordered, bounded, and carries
 a reason the rep can read.
 
-**What the model can actually do.** Its signal is concentrated. The top decile of its
-training population converted at **26.7% against a 6.5% base — 4.1x**. The second
-decile is 1.28x, and below the fourth the ordering is indistinguishable from chance
-(decile 5 converts *worse* than decile 10). It is a filter for the top slice, not a
-ranking to work down.
+**What the model can do.** Its signal is concentrated: the top decile of its training
+population converted at **26.7% against a 6.5% base — 4.1x**. The second is 1.28x, and
+below the fourth the ordering is indistinguishable from chance (decile 5 converts *worse*
+than decile 10). A filter for the top slice, not a ranking to work down.
 
 Two caveats a VP should hear before anyone gets excited:
 
@@ -47,10 +46,10 @@ Expected value says over-include; **rep trust says the opposite**, and trust is 
 last effort lost. So we protect precision at the top at the cost of recall.
 
 **The finding that reframes it.** **73% of the batch runs on information over 90 days
-old**, and every feature is a 90-day activity window — so for **218 of 300 accounts the
-window being predicted has already closed**. The model cannot see this; `snapshot_date`
-is not an input. Its highest-scoring account was last updated **October 2025**. Hand
-that to a rep and they reference a trial that ended ten months ago.
+old**, and every feature is a 90-day window — so for **218 of 300 accounts the window being
+predicted has already closed**. The model cannot see this; `snapshot_date` is not an input.
+Its top-scoring account was last updated **October 2025**: hand that to a rep and they
+reference a trial that ended ten months ago.
 
 ---
 
@@ -84,9 +83,9 @@ template. No tools, no other accounts, no say in who gets called.
 
 **Why not an autonomous agent?** The decisions worth automating — where to cut, what is
 too stale, who gets called — must be reproducible, explainable to a VP, and comparable
-against a control group. An LLM choosing them is none of those. I would change that for
-the ~20 genuinely ambiguous accounts near the threshold, where an investigator deciding
-*what to check next* earns its cost. That is the next thing to build, not the first.
+against a control group. An LLM choosing them is none of those. I would change that for the
+~20 ambiguous accounts near the threshold, where an investigator deciding *what to check
+next* earns its cost. Next, not first.
 
 **Deployment.** Nightly against Salesforce, artifacts pinned by hash, run records to a
 warehouse. **Two weeks in shadow mode first**: score, record, publish nothing, compare
@@ -119,12 +118,11 @@ has a standard error of **7.3pp** — 20% to 30% is noise. Over four weeks it fa
 from 6.5% at 80% power needs **~208 per arm**, about **14 weeks**. Alerting weekly on
 conversion at a 6.5% base rate manufactures noise.
 
-**Tracing.** `decisions.csv` and `runs.jsonl` exist because the 90-day question — which
-accounts did we queue, and did they beat the holdout — is a join, not a trace. LangSmith
-plugs in with two environment variables and no code (LangGraph emits to it natively);
-Langfuse takes three lines and is the self-hostable option if CRM data cannot leave the
-building. Neither replaces the gate: a trace explains what happened after it happened,
-and our worst failure produces a perfectly clean one.
+**Tracing.** The 90-day question — which accounts we queued and whether they beat the
+holdout — is a join, not a trace, hence `decisions.csv` and `runs.jsonl`. LangSmith plugs
+in with two environment variables and no code; Langfuse with three lines, self-hostable if
+CRM data cannot leave the building. Neither replaces the gate: our worst failure produces a
+perfectly clean trace.
 
 **When it trips.** Red publishes nothing — a late queue costs a morning, a wrong one
 costs the programme. Amber pauses for a named owner. `monitoring/RUNBOOK.md` gives each
