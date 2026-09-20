@@ -75,28 +75,42 @@ flowchart TD
     ROUTE --> FRESH["Buy fresh data first"]
     ROUTE --> NURT["Marketing nurture"]
     ROUTE --> HOLD["Leave alone,<br/>reason recorded"]
-    CALL --> BRIEF["Write the call brief:<br/>model writes the words,<br/>code fills every number"]
+    CALL --> CTRL{"Held back as<br/>the control group?"}
+    CTRL -->|"30%, chosen by hash"| KEEP["Not called.<br/>This is what proves<br/>the system worked"]
+    CTRL -->|"the rest"| BRIEF["Write the call brief:<br/>model writes the words,<br/>code fills every number"]
     BRIEF --> PUB["Publish to the rep's<br/>normal task list"]
     PUB --> REC["Record every decision,<br/>timing and cost"]
-    STOP --> REC
 ```
 
 The rep never opens a dashboard. The work appears where their work already is.
+
+The stop branch is a dead end on purpose: a halted batch publishes nothing **and writes no run
+record**, so the only trace is the console and the alert. That is a real gap, noted under
+[What this is not](#what-this-is-not).
 
 ### How one account is decided
 
 ```mermaid
 flowchart TD
-    A["One account"] --> B{"Score in the top 10%?"}
+    A["One account"] --> D{"Is the intent score missing,<br/>and would the real value<br/>change this decision?"}
+    D -->|"yes"| F["RE-ENRICH<br/>buy the data before deciding"]
+    D -->|"no"| B{"Score in the top 10%?"}
     B -->|"no, but top 30%"| N["NURTURE"]
     B -->|"no"| H["HOLD — reason recorded"]
     B -->|"yes"| C{"How old is the data?"}
-    C -->|"over a year"| F["RE-ENRICH<br/>refresh before calling"]
+    C -->|"over a year"| F
     C -->|"3–12 months"| E["CALL WITH CAVEAT<br/>brief states the age"]
-    C -->|"under 90 days"| D{"Was intent measured,<br/>or filled in?"}
-    D -->|"filled in, and it<br/>decides the outcome"| F
-    D -->|"measured"| G["CALL NOW"]
+    C -->|"under 90 days"| G["CALL NOW"]
 ```
+
+**The order is the point.** The intent question is asked first, and it is asked of *every* account,
+not only the ones already above the bar. An account can be below the call threshold precisely because
+its missing intent score was filled in with a population average, and those are the ones most worth
+paying to enrich, because the answer would change the decision in either direction. On the rules-only
+path the batch yields 7 enrichment requests, and **5 of those 7 score below the call bar** (0.084 to
+0.098 against a bar of 0.1088). An earlier version of this rule sat inside the `yes` branch and found
+only 2 accounts; the research log records why it moved. The committed run shows 19, because
+`--investigate` was on and the agent moved a further 12 there.
 
 Every threshold traces to something measured:
 
@@ -120,11 +134,11 @@ Three layers, and the split is the whole design.
 
 ```mermaid
 flowchart LR
-    subgraph D["RULES · ~280 accounts"]
+    subgraph D["RULES · every account, all 300"]
         direction TB
         D1["Check the data<br/>is usable"] --> D2["Ask the model<br/>for a score"] --> D3["Work out why<br/>it scored that"] --> D4["Apply the<br/>thresholds"]
     end
-    subgraph A["AGENT · ~20 borderline accounts"]
+    subgraph A["AGENT · revisits the ~20 nearest the line"]
         direction TB
         A1["Model picks<br/>what to check next"] --> A2["Recommends<br/>an action"] --> A3["Rules can<br/>overrule it"]
     end
@@ -132,8 +146,12 @@ flowchart LR
         direction TB
         L1["Model writes the words,<br/>leaving gaps for numbers"] --> L2["Code fills<br/>every number"] --> L3["Any invented number<br/>is rejected"]
     end
-    D --> A --> L --> OUT["Queue · briefs<br/>enrichment list · run record"]
+    D -->|"every account<br/>already has a decision"| A --> L --> OUT["Queue · briefs<br/>enrichment list · run record"]
 ```
+
+The layers are passes, not a split of the batch. The rules decide all 300; the agent is a **second
+opinion on the ~20 the rules were least sure about**, and it can only revise what the rules already
+settled.
 
 **Why so little is agentic.** Every fact is present at load time and the routing rule is a threshold
 comparison. There is nothing to discover, so nothing to decide about what to discover. Asking a
@@ -147,13 +165,20 @@ get a real tool-calling loop (`agent/investigator.py`, off by default, `--invest
 ```mermaid
 flowchart LR
     S["Boundary account"] --> M["Model decides<br/>what to check next"]
-    M -->|"tool call"| T["check_data_freshness<br/>probe_intent_sensitivity<br/>compare_to_similar_accounts<br/>check_recent_crm_activity"]
+    M -->|"tool call"| T["check_data_freshness<br/>probe_intent_sensitivity<br/>compare_to_similar_accounts<br/>check_recent_crm_activity (stubbed)"]
     T -->|"observation"| M
     M -->|"enough"| R["recommend_action"]
     R --> V{"Policy veto"}
     V -->|"allowed"| OK["Applied"]
-    V -->|"unsafe"| NO["Blocked, reason recorded"]
+    V -->|"unsafe"| NO["Overruled: the safe action<br/>stands, reason recorded"]
 ```
+
+Three of the four tools read real values out of the batch. `check_recent_crm_activity` is **stubbed**,
+because the exercise ships no contact history; it is there to show the seam a real CRM call would
+slot into, and it says so in its own docstring. The veto does not merely block: it substitutes the
+safe action, so an expired account the model wanted called becomes an enrichment request rather than
+nothing at all. It did not fire on the committed run (0 of 20) — a deliberate adversarial test caught
+the bug in it, not observation.
 
 The model chooses **which** question to ask. It never supplies the facts, because tools read from
 injected state, and it never has the last word: an expired account cannot reach a rep however
@@ -341,3 +366,9 @@ monitoring/   checks.py, demo_silent_failure.py, RUNBOOK.md
 Not a retrained model: the pickle is used exactly as provided. Not a lookup tool; nobody types in an
 account number. Not an autonomous emailer, since it queues work for humans and stops before anything
 leaves the building. Not production code, with no test suite, packaging or CI, as the exercise asks.
+
+One gap worth naming rather than hiding: **a halted batch writes no run record.** Every artifact is
+written in the `publish` node, so the night the agent refuses to publish is the one night that leaves
+nothing on disk to look at afterwards — exactly backwards for a system whose argument is
+observability. The fix is small (emit the record from `halt` too, with `published: false`) and it is
+the first thing I would change.
