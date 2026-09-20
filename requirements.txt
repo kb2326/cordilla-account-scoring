@@ -1,0 +1,7 @@
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.5.2
+matplotlib==3.9.2
+
+# Optional — only needed if you prefer a notebook over plain scripts.
+# pip install -r requirements-notebook.txt

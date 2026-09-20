@@ -1,0 +1,301 @@
+account_id,account_type,snapshot_date,employee_count,industry,intent_score,mql_count_90d,trial_started,trial_active_users,web_touchpoints_90d,sales_contacts_90d
+ACC-01073,Prospect,2026-04-11,9,Healthcare,,1,0,0,2,0
+ACC-00533,Prospect,2026-07-19,65,Manufacturing,63.0,1,0,0,7,0
+ACC-01319,Prospect,2025-08-15,17,Retail,,0,0,0,5,0
+ACC-00160,Suspect,2026-04-06,63,Professional Services,6.9,0,0,0,8,3
+ACC-00275,Suspect,2026-04-05,80,Healthcare,46.3,0,0,0,0,1
+ACC-00144,Prospect,2025-10-13,29,Financial Services,19.5,1,0,0,6,0
+ACC-00989,Suspect,2026-05-01,9,Professional Services,,3,0,0,9,0
+ACC-00270,Suspect,2026-04-28,45,Financial Services,12.0,0,0,0,2,5
+ACC-01192,Prospect,2026-04-03,112,Software,18.8,3,0,0,3,0
+ACC-00272,Prospect,2025-01-23,73,Financial Services,44.2,0,0,0,6,3
+ACC-00915,Prospect,2026-04-19,93,Retail,43.7,1,0,0,3,6
+ACC-00614,Prospect,2026-05-10,92,Professional Services,,1,0,0,5,0
+ACC-00602,Prospect,2026-03-02,25,Financial Services,,3,0,0,3,2
+ACC-00369,Prospect,2025-05-04,40,Healthcare,20.3,0,0,0,0,2
+ACC-00295,Prospect,2026-04-21,95,Manufacturing,37.2,2,0,0,1,0
+ACC-00109,Suspect,2024-11-21,112,Manufacturing,21.9,1,0,0,0,1
+ACC-00806,Prospect,2026-03-24,82,Healthcare,26.0,0,0,0,3,4
+ACC-00787,Former Customer,2026-04-04,62,Manufacturing,53.2,3,1,5,0,0
+ACC-00289,Prospect,2025-06-20,50,Healthcare,19.4,0,0,0,5,0
+ACC-00935,Suspect,2025-12-10,218,Manufacturing,,0,0,0,2,5
+ACC-01414,Prospect,2026-04-08,34,Manufacturing,23.5,2,0,0,0,2
+ACC-00461,Suspect,2025-11-27,173,Professional Services,,5,0,0,10,0
+ACC-00763,Suspect,2025-12-20,66,Healthcare,,0,0,0,4,0
+ACC-00481,Former Customer,2026-04-20,63,Healthcare,,5,0,0,0,3
+ACC-00313,Prospect,2026-05-02,466,Retail,,2,0,0,4,2
+ACC-00789,Suspect,2025-09-30,91,Professional Services,53.3,1,0,0,0,0
+ACC-01145,Prospect,2025-10-01,187,Manufacturing,33.5,0,0,0,2,3
+ACC-00561,Prospect,2025-05-21,82,Professional Services,13.7,0,0,0,4,2
+ACC-01179,Suspect,2026-05-04,672,Manufacturing,51.6,2,0,0,0,0
+ACC-00700,Suspect,2026-03-21,5,Professional Services,,0,0,0,8,0
+ACC-00049,Prospect,2026-04-22,105,Financial Services,12.1,0,0,0,0,0
+ACC-01025,Prospect,2026-04-28,29,Financial Services,,3,0,0,0,0
+ACC-00730,Suspect,2025-10-03,16,Financial Services,41.2,3,0,0,10,1
+ACC-00236,Prospect,2026-04-01,80,Retail,,0,0,0,4,0
+ACC-00564,Prospect,2026-04-19,7,Professional Services,,1,1,4,0,0
+ACC-01229,Prospect,2026-05-10,114,Software,12.0,1,0,0,5,0
+ACC-00980,Suspect,2026-03-16,287,Retail,20.3,0,0,0,0,2
+ACC-00550,Suspect,2026-04-29,22,Professional Services,7.5,5,0,0,2,1
+ACC-00414,Prospect,2026-04-18,14,Financial Services,,3,0,0,0,4
+ACC-00839,Prospect,2026-04-11,48,Manufacturing,9.8,1,0,0,1,4
+ACC-00376,Former Customer,2026-05-10,40,Financial Services,29.2,2,0,0,0,0
+ACC-00506,Suspect,2026-07-12,16,Software,51.8,0,0,0,0,7
+ACC-00449,Prospect,2025-07-19,24,Manufacturing,,1,0,0,3,0
+ACC-00910,Prospect,2025-07-13,19,Healthcare,47.5,1,0,0,1,2
+ACC-00299,Suspect,2025-09-06,617,Software,,2,0,0,0,0
+ACC-00267,Former Customer,2026-04-08,134,Financial Services,,0,0,0,0,0
+ACC-01290,Suspect,2026-04-12,467,Professional Services,38.1,0,0,0,7,0
+ACC-00285,Suspect,2026-03-11,140,Professional Services,36.6,3,1,3,4,0
+ACC-01282,Prospect,2026-04-20,121,Professional Services,,3,0,0,1,3
+ACC-01128,Suspect,2026-03-11,20,Retail,,0,1,5,0,1
+ACC-00438,Prospect,2024-10-31,22,Retail,4.3,3,0,0,1,0
+ACC-01491,Prospect,2025-10-15,188,Retail,33.2,1,1,3,0,5
+ACC-00273,Former Customer,2025-04-24,30,Professional Services,25.6,1,0,0,0,0
+ACC-00972,Suspect,2026-05-31,186,Retail,,3,0,0,4,1
+ACC-00391,Former Customer,2026-03-04,81,Retail,,0,0,0,11,2
+ACC-00116,Prospect,2024-10-23,100,Healthcare,42.5,0,0,0,2,3
+ACC-00130,Prospect,2026-03-05,19,Healthcare,,0,0,0,1,3
+ACC-00476,Suspect,2026-03-23,163,Financial Services,17.6,0,0,0,2,0
+ACC-00191,Prospect,2026-06-22,33,Professional Services,55.4,2,0,0,1,1
+ACC-00287,Prospect,2025-10-07,51,Professional Services,,0,0,0,0,0
+ACC-00570,Prospect,2026-04-18,28,Manufacturing,,0,0,0,0,5
+ACC-00112,Prospect,2026-05-12,145,Financial Services,15.0,4,0,0,2,4
+ACC-00908,Suspect,2025-02-22,143,Financial Services,14.4,2,1,0,0,1
+ACC-00345,Suspect,2026-05-01,53,Manufacturing,,5,0,0,6,3
+ACC-00284,Suspect,2026-05-29,39,Manufacturing,,4,1,0,0,1
+ACC-00082,Prospect,2026-05-12,50,Professional Services,53.3,0,0,0,0,4
+ACC-00065,Suspect,2025-11-14,42,Healthcare,8.1,0,1,0,13,1
+ACC-00334,Prospect,2026-04-08,49,Professional Services,24.9,0,0,0,4,0
+ACC-01038,Prospect,2025-11-01,31,Professional Services,19.5,0,0,0,7,1
+ACC-01263,Former Customer,2026-05-26,290,Software,30.4,0,0,0,0,0
+ACC-00707,Prospect,2026-05-22,163,Manufacturing,33.0,2,0,0,1,2
+ACC-01227,Suspect,2026-02-05,163,Retail,27.4,1,1,0,3,1
+ACC-01411,Prospect,2026-05-24,52,Retail,22.3,2,0,0,8,1
+ACC-00371,Former Customer,2025-11-18,22,Financial Services,63.9,4,1,2,8,2
+ACC-00541,Suspect,2026-04-22,136,Manufacturing,31.5,2,0,0,1,3
+ACC-00015,Prospect,2026-05-10,91,Software,,0,0,0,4,4
+ACC-00824,Former Customer,2025-12-27,323,Retail,,0,0,0,0,2
+ACC-01019,Prospect,2026-03-24,29,Manufacturing,7.7,5,0,0,0,4
+ACC-00690,Prospect,2026-05-18,30,Retail,,2,0,0,0,4
+ACC-01493,Prospect,2026-05-02,87,Healthcare,40.7,0,0,0,10,1
+ACC-01339,Prospect,2025-12-04,42,Healthcare,70.1,0,0,0,3,0
+ACC-01266,Suspect,2026-06-14,111,Manufacturing,38.9,2,0,0,5,1
+ACC-00100,Suspect,2026-04-29,16,Software,41.9,1,0,0,12,1
+ACC-01155,Prospect,2026-07-02,85,Retail,23.5,4,0,0,1,7
+ACC-00873,Prospect,2026-01-02,29,Professional Services,,0,0,0,11,2
+ACC-00631,Prospect,2026-01-02,38,Software,,0,0,0,8,0
+ACC-00718,Prospect,2025-12-20,25,Manufacturing,70.2,0,0,0,2,0
+ACC-00400,Suspect,2026-05-07,109,Software,24.2,1,0,0,0,4
+ACC-00021,Prospect,2026-04-24,28,Professional Services,,1,0,0,0,0
+ACC-00537,Prospect,2025-06-10,14,Professional Services,9.9,0,0,0,2,0
+ACC-00232,Prospect,2026-06-03,301,Retail,23.6,1,1,3,0,1
+ACC-01157,Suspect,2026-03-24,125,Financial Services,13.3,2,1,3,6,0
+ACC-00657,Prospect,2025-09-30,562,Financial Services,24.2,4,0,0,8,0
+ACC-00086,Prospect,2026-04-14,26,Professional Services,17.9,0,1,3,4,0
+ACC-00697,Former Customer,2025-02-08,167,Financial Services,,0,0,0,3,0
+ACC-00870,Suspect,2026-03-27,61,Software,31.7,4,0,0,3,4
+ACC-01337,Prospect,2026-03-24,28,Software,15.2,3,1,1,2,0
+ACC-00043,Suspect,2026-06-28,23,Manufacturing,43.6,0,0,0,4,3
+ACC-01212,Prospect,2026-05-07,27,Software,8.1,0,0,0,1,2
+ACC-00864,Suspect,2026-07-29,6,Retail,,1,0,0,0,0
+ACC-01434,Suspect,2026-01-15,700,Financial Services,25.0,2,0,0,0,0
+ACC-01464,Suspect,2026-05-27,145,Professional Services,19.0,3,0,0,4,1
+ACC-01257,Suspect,2025-06-06,19,Financial Services,37.6,0,0,0,0,0
+ACC-00940,Former Customer,2026-05-07,42,Financial Services,,0,0,0,0,0
+ACC-00527,Suspect,2025-08-23,107,Retail,30.7,3,0,0,0,5
+ACC-00018,Prospect,2025-01-10,22,Retail,,1,0,0,1,0
+ACC-00418,Suspect,2026-02-02,147,Financial Services,,1,1,0,0,1
+ACC-00687,Prospect,2026-03-16,54,Manufacturing,,0,0,0,8,0
+ACC-00392,Prospect,2026-02-11,35,Retail,47.8,1,0,0,6,0
+ACC-01334,Suspect,2025-10-24,111,Retail,55.0,1,0,0,0,0
+ACC-01064,Prospect,2026-04-29,57,Retail,61.7,1,1,1,0,5
+ACC-00776,Suspect,2026-04-05,1909,Financial Services,31.1,2,0,0,0,0
+ACC-00423,Former Customer,2026-04-28,16,Financial Services,11.0,0,0,0,0,0
+ACC-01496,Former Customer,2026-04-10,277,Retail,38.3,2,0,0,13,0
+ACC-00416,Prospect,2026-05-23,117,Manufacturing,27.4,0,0,0,0,1
+ACC-00041,Prospect,2026-03-31,122,Professional Services,12.1,0,1,1,3,3
+ACC-00625,Prospect,2026-05-31,15,Software,,1,0,0,0,0
+ACC-00431,Prospect,2026-05-20,25,Manufacturing,,1,0,0,6,6
+ACC-00498,Prospect,2025-11-11,44,Financial Services,25.7,1,1,3,1,0
+ACC-00237,Suspect,2026-05-10,114,Software,,0,0,0,2,0
+ACC-00362,Suspect,2026-05-18,97,Financial Services,15.9,0,0,0,0,3
+ACC-00228,Prospect,2026-05-21,8,Healthcare,,2,0,0,0,2
+ACC-01129,Prospect,2026-03-28,76,Manufacturing,77.5,1,0,0,5,0
+ACC-00539,Prospect,2026-05-20,98,Retail,,4,0,0,0,2
+ACC-00768,Prospect,2025-12-31,69,Manufacturing,,0,1,0,14,1
+ACC-00208,Prospect,2025-07-13,20,Healthcare,,0,1,0,3,1
+ACC-01027,Prospect,2025-08-19,14,Retail,,1,0,0,2,0
+ACC-00752,Suspect,2026-03-21,94,Professional Services,30.8,1,0,0,4,1
+ACC-01151,Prospect,2026-06-01,44,Retail,8.0,1,1,2,0,0
+ACC-01459,Suspect,2026-04-30,128,Software,40.7,4,0,0,2,7
+ACC-00183,Prospect,2025-05-11,29,Retail,67.8,5,0,0,0,0
+ACC-00525,Prospect,2026-05-04,14,Retail,27.6,1,1,3,4,1
+ACC-01092,Prospect,2026-01-30,38,Retail,,2,0,0,0,0
+ACC-00800,Suspect,2025-08-06,14,Retail,31.8,0,0,0,6,0
+ACC-01385,Prospect,2026-08-01,44,Professional Services,26.2,0,0,0,1,0
+ACC-00233,Prospect,2026-02-21,102,Manufacturing,22.1,0,0,0,8,0
+ACC-00778,Prospect,2024-09-25,63,Software,9.5,0,0,0,0,2
+ACC-01352,Former Customer,2026-04-27,115,Financial Services,,3,1,0,0,3
+ACC-00966,Prospect,2026-01-06,74,Retail,51.6,4,0,0,8,0
+ACC-00682,Former Customer,2025-07-14,106,Healthcare,31.2,4,0,0,2,4
+ACC-01185,Former Customer,2026-05-24,125,Manufacturing,24.8,1,0,0,0,2
+ACC-00265,Suspect,2026-04-30,133,Professional Services,,0,1,0,0,5
+ACC-00042,Prospect,2024-11-22,191,Software,34.0,1,1,4,1,2
+ACC-01299,Suspect,2026-01-28,231,Retail,32.1,0,0,0,1,0
+ACC-00359,Former Customer,2026-04-29,41,Financial Services,7.5,3,0,0,0,0
+ACC-01429,Suspect,2026-06-24,80,Software,,1,1,1,3,5
+ACC-01293,Suspect,2025-12-20,95,Retail,22.0,0,0,0,0,2
+ACC-00876,Prospect,2026-04-29,153,Financial Services,,1,0,0,2,3
+ACC-01235,Prospect,2026-03-07,9,Healthcare,,0,0,0,4,3
+ACC-01269,Suspect,2024-12-11,36,Manufacturing,15.2,1,1,0,4,0
+ACC-00701,Prospect,2026-05-24,200,Financial Services,39.0,3,0,0,3,0
+ACC-00619,Prospect,2025-09-24,130,Financial Services,47.5,3,0,0,0,3
+ACC-00124,Prospect,2026-04-16,52,Healthcare,44.7,0,0,0,4,0
+ACC-00901,Prospect,2026-04-06,29,Financial Services,,2,0,0,1,2
+ACC-01193,Former Customer,2026-05-06,452,Professional Services,33.2,4,0,0,3,0
+ACC-01349,Suspect,2026-05-04,18,Manufacturing,35.9,0,0,0,2,0
+ACC-01283,Suspect,2026-04-01,50,Retail,61.2,0,0,0,3,4
+ACC-00402,Prospect,2026-03-09,243,Professional Services,,2,0,0,0,0
+ACC-00366,Suspect,2026-02-13,31,Professional Services,11.7,2,0,0,5,0
+ACC-00629,Prospect,2026-07-01,66,Retail,,2,0,0,9,0
+ACC-00080,Former Customer,2026-05-14,68,Manufacturing,14.7,2,0,0,5,0
+ACC-00889,Prospect,2026-06-18,16,Software,42.0,0,0,0,1,1
+ACC-01225,Prospect,2026-06-09,37,Financial Services,13.4,2,0,0,4,3
+ACC-00470,Suspect,2026-05-05,26,Retail,,0,0,0,0,0
+ACC-00504,Prospect,2024-12-18,13,Software,,0,0,0,1,0
+ACC-00479,Prospect,2026-04-23,126,Manufacturing,26.5,3,0,0,8,0
+ACC-00805,Prospect,2025-10-20,15,Financial Services,,2,0,0,0,0
+ACC-00617,Prospect,2025-07-20,22,Retail,31.2,4,0,0,2,1
+ACC-00586,Prospect,2026-02-25,25,Healthcare,27.2,0,0,0,3,2
+ACC-01354,Former Customer,2026-04-10,18,Financial Services,,1,0,0,0,0
+ACC-00433,Former Customer,2025-03-04,291,Manufacturing,35.8,4,1,1,5,0
+ACC-00962,Prospect,2025-09-14,90,Software,57.9,0,1,3,1,0
+ACC-00093,Prospect,2025-06-24,224,Healthcare,27.9,1,0,0,1,2
+ACC-00552,Prospect,2026-05-11,25,Software,10.1,1,1,2,2,0
+ACC-00315,Suspect,2026-05-18,6,Retail,,0,0,0,4,4
+ACC-00288,Suspect,2026-05-26,71,Manufacturing,30.3,0,0,0,3,0
+ACC-00386,Prospect,2026-01-11,80,Healthcare,,2,0,0,2,2
+ACC-00958,Former Customer,2025-06-18,106,Manufacturing,,0,0,0,0,5
+ACC-01340,Prospect,2026-03-07,460,Manufacturing,22.6,1,0,0,2,3
+ACC-01415,Prospect,2025-05-21,143,Professional Services,,0,1,0,5,9
+ACC-01404,Suspect,2026-04-18,175,Software,,4,1,0,9,0
+ACC-01165,Prospect,2026-04-03,65,Healthcare,,1,0,0,3,2
+ACC-01386,Suspect,2025-08-11,60,Healthcare,36.3,0,0,0,9,0
+ACC-01416,Prospect,2026-01-24,111,Professional Services,30.5,2,0,0,7,4
+ACC-00067,Prospect,2026-01-30,161,Retail,7.2,1,0,0,0,3
+ACC-00597,Suspect,2025-05-05,181,Retail,,5,0,0,1,0
+ACC-01008,Prospect,2026-05-14,30,Professional Services,,3,0,0,10,0
+ACC-00728,Prospect,2026-05-20,32,Software,8.9,0,0,0,10,0
+ACC-00732,Suspect,2025-04-14,22,Software,,2,0,0,3,3
+ACC-00558,Prospect,2026-04-11,123,Software,40.6,0,1,2,4,2
+ACC-00735,Prospect,2025-08-16,103,Financial Services,,4,0,0,1,6
+ACC-01442,Prospect,2026-06-26,26,Healthcare,30.5,1,0,0,7,2
+ACC-01144,Suspect,2026-06-27,104,Software,,0,0,0,3,2
+ACC-01287,Suspect,2026-06-25,23,Financial Services,,1,0,0,3,3
+ACC-01289,Prospect,2026-06-16,51,Financial Services,,1,0,0,0,4
+ACC-00702,Prospect,2025-08-15,47,Professional Services,41.9,0,0,0,5,1
+ACC-01178,Prospect,2026-04-27,92,Manufacturing,,0,0,0,4,0
+ACC-01164,Suspect,2026-02-26,10,Retail,26.6,5,0,0,0,0
+ACC-00717,Prospect,2026-03-11,69,Healthcare,,0,0,0,1,1
+ACC-00260,Prospect,2025-05-31,85,Financial Services,30.8,0,0,0,12,6
+ACC-00101,Former Customer,2026-03-14,30,Manufacturing,45.6,2,0,0,0,6
+ACC-00536,Prospect,2026-04-17,47,Software,,0,0,0,7,1
+ACC-00323,Prospect,2025-11-10,58,Healthcare,,4,0,0,9,4
+ACC-00070,Prospect,2026-03-30,130,Software,7.1,3,0,0,0,0
+ACC-00011,Suspect,2026-03-06,17,Manufacturing,,0,1,0,7,0
+ACC-01373,Suspect,2026-01-29,29,Software,,4,0,0,0,0
+ACC-01043,Former Customer,2026-06-19,56,Software,14.3,3,0,0,10,0
+ACC-00161,Former Customer,2026-05-22,31,Professional Services,,0,0,0,5,1
+ACC-00205,Suspect,2025-06-08,243,Retail,63.3,2,0,0,5,1
+ACC-00960,Suspect,2026-05-04,49,Healthcare,20.5,0,0,0,0,0
+ACC-00802,Prospect,2026-04-10,150,Software,50.7,2,1,0,5,0
+ACC-01091,Prospect,2025-05-01,38,Professional Services,19.5,0,1,1,0,0
+ACC-00398,Suspect,2026-03-25,96,Manufacturing,,1,1,3,4,0
+ACC-01353,Suspect,2025-11-05,74,Financial Services,,1,0,0,6,1
+ACC-00748,Prospect,2026-03-17,99,Professional Services,16.3,1,0,0,5,0
+ACC-00186,Suspect,2024-12-19,20,Manufacturing,24.6,2,0,0,7,4
+ACC-00501,Suspect,2026-03-25,66,Financial Services,23.8,3,0,0,6,2
+ACC-00264,Suspect,2026-06-17,46,Manufacturing,37.3,0,1,2,0,0
+ACC-00941,Prospect,2026-05-09,15,Professional Services,,1,0,0,0,1
+ACC-00828,Prospect,2026-06-02,23,Healthcare,38.8,1,0,0,0,5
+ACC-01100,Prospect,2026-05-22,357,Software,30.7,3,0,0,9,0
+ACC-01333,Suspect,2026-04-23,26,Manufacturing,,4,0,0,0,4
+ACC-00659,Suspect,2026-03-24,27,Financial Services,,2,0,0,1,0
+ACC-00900,Suspect,2026-04-30,154,Retail,,0,0,0,0,2
+ACC-00531,Prospect,2026-05-04,496,Software,,0,1,2,0,0
+ACC-00686,Prospect,2026-03-11,46,Professional Services,,0,1,3,1,6
+ACC-01456,Prospect,2026-04-27,30,Manufacturing,33.4,2,0,0,0,3
+ACC-00581,Suspect,2026-03-17,25,Software,,0,0,0,5,5
+ACC-01177,Former Customer,2025-12-05,30,Retail,31.5,3,0,0,1,5
+ACC-00095,Suspect,2026-06-30,16,Retail,,0,0,0,0,3
+ACC-01475,Suspect,2026-06-13,107,Retail,41.7,0,1,1,5,2
+ACC-00898,Prospect,2025-12-30,480,Retail,,3,0,0,0,0
+ACC-00906,Former Customer,2026-03-07,13,Manufacturing,14.6,0,0,0,5,2
+ACC-01111,Suspect,2026-04-14,44,Manufacturing,58.3,0,1,2,4,3
+ACC-00587,Former Customer,2026-03-22,81,Healthcare,30.1,2,0,0,0,0
+ACC-01201,Prospect,2026-04-13,53,Healthcare,,0,1,0,1,0
+ACC-01208,Prospect,2026-04-06,5,Financial Services,47.2,0,0,0,3,1
+ACC-00151,Suspect,2025-06-19,27,Financial Services,,1,0,0,0,1
+ACC-01102,Prospect,2026-04-27,29,Professional Services,42.5,1,0,0,10,1
+ACC-00779,Suspect,2026-04-27,103,Software,30.3,0,0,0,4,3
+ACC-00317,Prospect,2026-05-19,87,Healthcare,29.8,1,0,0,0,1
+ACC-01168,Former Customer,2025-11-14,19,Software,,0,0,0,3,0
+ACC-00150,Prospect,2026-04-16,51,Financial Services,16.4,6,0,0,0,2
+ACC-01382,Prospect,2025-08-31,127,Healthcare,23.9,0,0,0,2,4
+ACC-00175,Former Customer,2026-04-25,317,Professional Services,24.6,0,0,0,0,4
+ACC-00268,Former Customer,2026-06-29,97,Retail,40.6,3,0,0,5,0
+ACC-00421,Suspect,2025-11-25,88,Software,30.1,2,0,0,0,4
+ACC-01300,Prospect,2025-11-21,52,Financial Services,,2,0,0,6,2
+ACC-01326,Former Customer,2025-05-26,21,Retail,22.5,0,0,0,1,9
+ACC-01471,Former Customer,2026-07-03,83,Professional Services,45.7,1,0,0,9,0
+ACC-01135,Prospect,2026-01-21,195,Retail,47.7,0,0,0,0,2
+ACC-00483,Prospect,2026-06-30,50,Professional Services,14.8,3,1,0,0,0
+ACC-00624,Suspect,2025-04-28,7,Professional Services,26.5,1,0,0,0,0
+ACC-00467,Prospect,2026-03-19,19,Healthcare,,0,0,0,3,1
+ACC-00429,Suspect,2026-04-24,132,Financial Services,27.8,2,0,0,0,1
+ACC-00420,Prospect,2026-03-13,77,Software,,1,0,0,6,0
+ACC-00358,Prospect,2026-03-19,79,Financial Services,,3,0,0,0,2
+ACC-00967,Suspect,2026-04-27,76,Manufacturing,,2,0,0,6,2
+ACC-01440,Prospect,2026-04-26,175,Manufacturing,7.6,4,0,0,8,0
+ACC-00633,Prospect,2026-05-25,188,Professional Services,30.3,3,0,0,3,0
+ACC-01394,Suspect,2026-05-12,61,Healthcare,,3,1,1,9,0
+ACC-00001,Suspect,2026-06-24,38,Software,33.8,2,0,0,3,0
+ACC-01020,Suspect,2026-05-07,138,Manufacturing,17.2,1,1,0,2,0
+ACC-00077,Prospect,2025-05-01,54,Software,,0,0,0,6,2
+ACC-00832,Prospect,2026-06-10,52,Manufacturing,14.6,0,0,0,0,5
+ACC-01495,Suspect,2025-03-01,16,Financial Services,26.7,0,0,0,5,0
+ACC-00808,Prospect,2025-09-18,26,Retail,28.8,1,0,0,7,0
+ACC-00669,Suspect,2026-01-13,27,Professional Services,,0,0,0,0,1
+ACC-00833,Prospect,2026-05-26,295,Software,49.6,2,0,0,0,2
+ACC-01432,Suspect,2025-11-05,7,Retail,18.8,2,0,0,5,4
+ACC-00887,Prospect,2026-04-25,25,Manufacturing,58.1,2,0,0,0,3
+ACC-00122,Prospect,2026-06-24,698,Manufacturing,,0,0,0,5,6
+ACC-00471,Prospect,2026-04-26,36,Financial Services,37.9,0,0,0,0,3
+ACC-01033,Suspect,2026-04-14,202,Healthcare,1.7,0,0,0,0,1
+ACC-01383,Former Customer,2026-03-29,36,Professional Services,,0,0,0,1,1
+ACC-01271,Prospect,2026-04-10,68,Healthcare,26.5,0,0,0,0,2
+ACC-00577,Suspect,2026-05-13,111,Professional Services,,0,0,0,6,1
+ACC-00758,Suspect,2026-05-31,9,Professional Services,,0,0,0,9,0
+ACC-01026,Prospect,2026-05-28,6,Professional Services,,4,0,0,5,4
+ACC-00722,Suspect,2025-04-19,105,Manufacturing,27.5,2,0,0,0,2
+ACC-00146,Prospect,2026-01-21,62,Manufacturing,4.4,0,1,0,3,5
+ACC-01045,Suspect,2026-04-14,61,Healthcare,27.6,3,0,0,0,0
+ACC-00136,Suspect,2025-04-14,15,Financial Services,15.0,4,0,0,4,0
+ACC-00646,Prospect,2025-11-02,637,Manufacturing,,2,0,0,3,6
+ACC-00803,Prospect,2025-11-29,75,Financial Services,18.2,1,0,0,1,2
+ACC-00492,Suspect,2026-08-01,559,Retail,,0,1,2,6,3
+ACC-00883,Prospect,2026-07-25,56,Financial Services,,4,0,0,6,6
+ACC-00598,Suspect,2024-12-21,92,Software,25.2,1,0,0,0,2
+ACC-00131,Prospect,2025-03-25,46,Healthcare,,1,0,0,0,0
+ACC-00852,Prospect,2025-08-22,12,Financial Services,29.7,2,0,0,0,0
+ACC-00033,Prospect,2025-10-05,437,Professional Services,,1,0,0,5,3
+ACC-00934,Prospect,2025-10-09,20,Retail,11.2,2,0,0,7,2
+ACC-01377,Prospect,2026-04-08,800,Software,,0,0,0,3,0
+ACC-01428,Prospect,2026-03-17,29,Healthcare,,0,0,0,1,0
+ACC-00453,Former Customer,2026-03-18,236,Professional Services,29.1,0,0,0,1,3
+ACC-01311,Prospect,2026-05-27,71,Retail,,0,0,0,0,1
+ACC-01214,Former Customer,2026-03-22,57,Software,,0,0,0,2,5
+ACC-01021,Prospect,2025-10-15,135,Retail,39.3,0,0,0,8,1
+ACC-00076,Suspect,2026-05-06,149,Financial Services,34.6,0,1,0,9,0
+ACC-00200,Prospect,2026-04-07,47,Retail,43.7,0,1,3,6,0
