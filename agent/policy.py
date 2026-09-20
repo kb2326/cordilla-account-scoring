@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 from .contracts import EXPIRED_DAYS, HORIZON_DAYS
+from .explain import decision_depends_on_missing_intent
 
 # Actions, not scores. The output of this module is a decision a human can act on.
 CALL_NOW = "CALL_NOW"
@@ -77,7 +78,7 @@ def assign_actions(df: pd.DataFrame, config: PolicyConfig) -> pd.DataFrame:
     """Give every account an action and a plain-English reason for it.
 
     Expects the columns added by contracts.add_quality_flags plus `score`, and
-    optionally `intent_drives_score` from explain.py. Nothing is dropped: an
+    optionally the intent-sensitivity pair from explain.py. Nothing is dropped: an
     account that gets no call still leaves with a recorded reason, because
     "why wasn't this one called?" is a question reps and managers actually ask.
     """
@@ -87,20 +88,23 @@ def assign_actions(df: pd.DataFrame, config: PolicyConfig) -> pd.DataFrame:
         raise ValueError(f"assign_actions needs {sorted(missing)}; run add_quality_flags and score first")
 
     out = df.copy()
-    # Optional input: explain.py sets this when the imputed intent value is one of
-    # the two features doing the most work in that account's score. Absent it, we
-    # do not guess - imputed intent alone becomes a caveat, not a re-enrichment.
-    drives = out.get("intent_drives_score", pd.Series(False, index=out.index)).fillna(False)
-
     above_bar = out.score >= config.call_threshold
     expired = out.snapshot_age_days > config.expired_after_days
     stale = out.snapshot_age_days > config.stale_after_days
-    # The score rests on a number nobody measured: refresh it, don't act on it.
-    fabricated = out.intent_imputed & drives
+    # True only where the intent value nobody measured could move this account
+    # across the call threshold - i.e. the decision itself depends on data we do
+    # not have. Requires explain_batch to have run; defaults to False without it,
+    # so a missing explanation step downgrades the rule rather than inventing one.
+    fabricated = decision_depends_on_missing_intent(out, config.call_threshold)
 
+    # `fabricated` is checked before the score bar, not after it. The first version
+    # of this rule only fired for accounts already above the bar, which misses the
+    # more valuable case entirely: an account sitting below the line *because* its
+    # intent score was filled in with an average. Those are precisely the ones
+    # worth paying to enrich - the data would change the decision either way.
     actions = np.select(
         [
-            above_bar & (expired | fabricated),
+            fabricated | (above_bar & expired),
             above_bar & stale,
             above_bar,
             out.score >= config.nurture_threshold,
@@ -121,7 +125,8 @@ def _reason(row, config: PolicyConfig) -> str:
     if row.action == RE_ENRICH:
         if age > config.expired_after_days:
             return f"scores in the top tier but its information is {age} days old; refresh before calling"
-        return "scores in the top tier, but that score leans on an intent value that was never measured"
+        return ("no intent data for this account, and the value would decide whether it "
+                "clears the bar; worth buying before anyone calls")
     if row.action == CALL_WITH_CAVEAT:
         return f"top tier; information is {age} days old, so treat the activity as historical"
     if row.action == CALL_NOW:
