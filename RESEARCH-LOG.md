@@ -224,3 +224,151 @@ omissions:
 Earlier in prep I had planned an LLM-judge evaluation harness with judge calibration. Reading the
 packet properly killed it: evals are not one of the three scored areas, monitoring is, and
 "no formal test suite" is explicit. Dropped it before writing any of it.
+
+---
+
+### 14:10 — Building the contract layer, and a guard that was wrong
+
+Wrote `agent/contracts.py` and `agent/scoring.py` before anything else, on the theory that
+a batch which should not be scored must never reach the model. Structural failures
+(missing columns, nulls, negative counts, duplicate ids, trial users with no trial) raise;
+distribution questions are monitoring's job, not the contract's.
+
+**The version guard I first wrote was wrong, and running it is what caught it.** It read
+`_sklearn_version` off the loaded pipeline and compared it to the running version. Looked
+sensible; blocked a perfectly good model with "saved with scikit-learn unknown". Cause:
+scikit-learn *strips* that attribute during unpickling and signals a mismatch through
+`InconsistentVersionWarning` instead. Rewrote it to catch the warning and refuse on it,
+which is both correct and shorter.
+
+Checked the contract actually bites rather than assuming: seven negative cases, all
+blocked, plus one deliberate non-block — an unseen `account_type` only warns, because the
+encoder turns it into all-zeros silently and that deserves attention, but halting a
+morning's work because sales invented a new segment is the wrong response.
+
+---
+
+### 15:00 — Policy, then a bug the data found
+
+Thresholds in one module with their evidence beside them. The call bar is the training p90
+(0.1088) because that is where the decile table stops carrying signal. Absolute, not "top
+50 of today" — a relative cut would absorb a distribution shift silently.
+
+Control group assigned by hashing `account_id` with a versioned salt rather than at
+random, so an account never drifts between treated and control across runs. Random
+per-run assignment would quietly destroy the comparison it exists for, and that is the
+sort of thing nobody notices until the quarter is over.
+
+Then `explain.py`, and a second correction to my own rule. Ablation cannot detect imputed
+values — replacing a median-filled number with the median changes nothing — so "does
+intent drive this score" is unanswerable that way. Replaced it with a decision-shaped
+test: re-score at intent p25 and p75 and ask whether the account lands on different sides
+of the call threshold. **Running it exposed that my `RE_ENRICH` rule only fired for
+accounts already above the bar**, which misses the valuable case entirely: accounts
+sitting below the line because their missing intent was filled with an average. Moved the
+check ahead of the bar. `RE_ENRICH` went from 2 to 7 accounts, four found only by the fix.
+
+---
+
+### 16:30 — The graph, and a comment of mine that was false
+
+Wired the nodes into LangGraph. First run died: `Type is not msgpack serializable:
+DataFrame`. My own module docstring had claimed `InMemorySaver` tolerates a DataFrame in
+state. It does not — it serializes everything on the way in.
+
+The fix was better than the original design: state now holds what is worth replaying
+(counts, health, decisions) while the batch travels in a run-scoped workspace on the
+context object, which is never checkpointed. Noted in the module that the production
+answer goes further — a parquet path in state rather than a frame anywhere.
+
+Verified the gate with deliberately degraded batches rather than trusting it: a 33pp
+collapse in intent coverage halts before scoring; an 8pp drift pauses at `interrupt()` and
+respects either answer.
+
+---
+
+### 17:15 — The brief writer, and a contradiction in my own design
+
+The one place a language model belongs here. It writes sentences with `{{placeholders}}`
+and no digits; code substitutes every value; a verifier rejects any number the model typed
+itself.
+
+First run: **all 16 briefs failed verification and fell back to the template.** The
+verifier was right and my design was wrong. Driver phrases like "8 website visits in the
+90 days to 2026-08-01" are built by code and therefore trustworthy, but they contain
+digits, so a blanket no-digits rule rejected them. Fix: evidence travels as `{{evidence}}`
+like every other value. Numbers now reach the page only through code-controlled
+substitution, which is what the rule always meant.
+
+Put the retry in the graph as a cycle rather than a loop inside a helper, so it appears in
+the generated diagram and lands in the run record. Verified both paths: clean model, 16
+calls, 0 rejections; a model that types a number, 32 calls, 32 rejections, 16 template
+fallbacks, and two passes through write-verify in the event log.
+
+---
+
+### 18:00 — Writing, and cutting
+
+The proposal came in at 1,283 words against their stated 800–1,200. Cut rather than
+argued. I had also written "1,190 words" in a commit message before counting; left the
+wrong number in history with a correction rather than amending it, because this whole repo
+is built to avoid exactly that kind of unchecked figure.
+
+The README accuracy pass found four claims that had drifted from the code while I wrote
+documentation ahead of implementation — a baseline file that does not exist, an events log
+we do not write, four modules listed out of nine, and a CLI I had documented but never
+written. Wrote the CLI, fixed the rest, then executed every command in the README before
+committing.
+
+---
+
+## Final entry — the raw material I would present from
+
+Not the presentation. The things I would stand behind in the room, and where each came from.
+
+**The one-sentence version.** The model ranks usefully in its top decile and nowhere else,
+its scores are not probabilities, and three quarters of the batch describes a period that
+has already closed — so the value is triage, and the risk is trust.
+
+**Numbers I would put on a slide.** All from `analysis/findings.json`, regenerated by
+`python analysis/profile.py`:
+
+| Claim | Figure |
+|---|---|
+| Top decile conversion vs base | 26.7% vs 6.5% — **4.1x**, in-sample |
+| Where signal stops | decile 2 = 1.28x; decile 5 converts worse than decile 10 |
+| Calls per win | ~15.4 at base rate, ~3.4 in the top decile |
+| Model generalisation | **19 of 40 trees made out-of-bag loss worse**; last 10 net negative |
+| Calibration | top decile predicts 13.9%, delivers 26.7%; middle predicts 5.6%, delivers 0.8% |
+| Can it say yes? | max score 0.2698 — at a 0.5 cut it fires **zero** times, ever |
+| Staleness | median 121 days; 73% over 90 days; **218 of 300 outcome windows already closed** |
+| Intent coverage | 38.7% missing, median-imputed at 25.3; converts 8.2% present vs 3.9% missing |
+| Censored labels | 101 training rows younger than 90 days, all labelled "did not convert" |
+| Drift today | every feature PSI below 0.06, score PSI 0.0061 — the baseline the alerts use |
+| This run | 300 scored, 16 queued, 7 to enrichment, 10 held back, 78ms, $0.0088 |
+
+**Assumptions, which are mine and not Cordilla's data:** 5 SDRs × 40 dials × 20 days ≈
+1,000 accounts worked monthly; $15k ACV; about $1 per enriched record; about 8 minutes per
+call attempt. The calls-per-win claim survives all four being wrong; the ARR figure does not.
+
+**A hypothesis I checked that did not survive.** The packet says intent data skews toward
+larger accounts. In this snapshot coverage is flat at 0.59–0.62 across every
+employee-count quartile, so I did not use the claim.
+
+**Three things I would say before being asked.** The 4.1x is in-sample and the out-of-bag
+trace argues it is optimistic. Ablation reason codes ignore feature interactions. The
+language model is mocked, so cost is assumed rates over measured tokens.
+
+**If the panel changes the scenario:**
+
+- *"The intent vendor gets cancelled."* 27% of the model's weight disappears and 61% of
+  accounts lose their strongest feature. The coverage check goes red on the next run,
+  which is the system working as designed. I would re-derive thresholds without intent,
+  expect a materially weaker top decile, and say so before anyone re-plans headcount on it.
+- *"You get one rep, not five."* Capacity is config. The ranking matters more, not less,
+  and the enrichment queue becomes the better of the two investments.
+- *"A VP wants the score visible in Salesforce."* I would push back: these are not
+  probabilities, and a visible 0.21 will be read as 21%. Tiers and reasons, not raw scores.
+- *"Prove it works."* I cannot yet, and would not pretend to. The holdout starts producing
+  a defensible answer at roughly 14 weeks. That is the honest schedule, and skipping it is
+  what cost the last effort its credibility.

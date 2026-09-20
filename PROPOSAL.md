@@ -119,6 +119,13 @@ has a standard error of **7.3pp** — 20% to 30% is noise. Over four weeks it fa
 from 6.5% at 80% power needs **~208 per arm**, about **14 weeks**. Alerting weekly on
 conversion at a 6.5% base rate manufactures noise.
 
+**Tracing.** `decisions.csv` and `runs.jsonl` exist because the 90-day question — which
+accounts did we queue, and did they beat the holdout — is a join, not a trace. LangSmith
+plugs in with two environment variables and no code (LangGraph emits to it natively);
+Langfuse takes three lines and is the self-hostable option if CRM data cannot leave the
+building. Neither replaces the gate: a trace explains what happened after it happened,
+and our worst failure produces a perfectly clean one.
+
 **When it trips.** Red publishes nothing — a late queue costs a morning, a wrong one
 costs the programme. Amber pauses for a named owner. `monitoring/RUNBOOK.md` gives each
 alert an owner and a first move.

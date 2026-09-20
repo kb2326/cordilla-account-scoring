@@ -187,6 +187,31 @@ Every cost and volume figure is tagged **measured** or **assumed**. The language
 tokens and prices them against a documented rate table — so the cost figure is honest about what it
 is, and swapping in a live call changes the rates, not the plumbing.
 
+### Why not LangSmith or Langfuse?
+
+Partly because they need an account, and the packet provides none — a repo whose
+observability only works with someone else's API key does not work for the person
+reviewing it. But mostly because they answer a different question.
+
+A tracing backend answers *"what did the run do, and what did the model cost?"* The
+question this system has to answer in 90 days is *"which accounts did we queue on 12
+August, what did we believe about them, and did they convert more often than the ones we
+held back?"* That is a table you join to Salesforce, not a trace you scroll. Hence
+`decisions.csv` and `runs.jsonl`, which an analyst can query with SQL and nobody needs a
+login for.
+
+They are complementary, not alternatives, and both plug in cleanly:
+
+| | How | Cost to add |
+|---|---|---|
+| **LangSmith** | `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY=...` | **No code at all.** `langsmith` already arrives with `langchain-core`, and LangGraph emits to it automatically — every node becomes a span with timings and token usage |
+| **Langfuse** | `pip install langfuse`, then pass `CallbackHandler()` in the run config | Three lines, one dependency. The self-hostable option if account data cannot leave the building, which for Salesforce records is a real constraint |
+
+What neither replaces is the batch gate. A trace tells you what happened *after* it
+happened; `monitoring/checks.py` runs before the queue is published and can refuse. In
+this system the refusal is the valuable part — the failure we care about produces a
+perfectly clean trace.
+
 ---
 
 ## Where the numbers come from
