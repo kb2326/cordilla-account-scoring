@@ -1,7 +1,16 @@
 # Cordilla account triage
 
-**Turns a scoring model nobody used into a rep's morning, and refuses to publish when the data
-underneath it looks wrong.**
+**Every morning this decides three things: which accounts a rep should phone today, which ones need
+fresh data bought before anyone wastes a call on them, and which to leave alone. Then it writes down
+what it decided, what it cost, and whether today's data was trustworthy enough to act on at all.**
+
+A model that scores these accounts already existed and had sat unused for months, because a number in
+a spreadsheet does not tell anyone who to ring on Monday. This repo is the part in between, plus the
+checks that notice when it quietly stops being right.
+
+That last part is not decoration. Cordilla shipped a scoring system once before; it launched well and
+lost the room two quarters later, when the numbers drifted away from what reps were seeing and nobody
+was watching closely enough to catch it.
 
 ```bash
 pip install -r requirements.txt
